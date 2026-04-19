@@ -4,3 +4,25 @@ mark.c3 { background: var(--color-yellow); }
 mark.c4 { background: var(--color-green); }
 mark.c5 { background: var(--color-cyan); }
 mark.c6 { background: var(--color-purple); }
+
+/* Status bar toggle */
+.canvas-annotator-status {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+.canvas-annotator-status:hover {
+  opacity: 1;
+}
+.canvas-annotator-status--active {
+  color: var(--text-accent);
+  opacity: 1;
+}
+
+/* Click-to-jump mark links */
+.canvas-annotator-link {
+  cursor: pointer;
+}
+.canvas-annotator-link:hover {
+  filter: brightness(0.85);
+}

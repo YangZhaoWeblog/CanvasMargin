@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { annotateSelection } from "../src/annotator";
+import { annotateSelection, shouldSkipAnnotation } from "../src/annotator";
 
 describe("annotateSelection", () => {
   it("wraps plain selected text with mark tag", () => {
@@ -42,5 +42,39 @@ describe("annotateSelection", () => {
     const doc = "Hello world";
     const result = annotateSelection(doc, 6, 11, "5");
     expect(result.newDoc).toMatch(/^Hello <mark class="c5 anc-[A-Za-z0-9_-]{21}">world<\/mark>$/);
+  });
+});
+
+describe("shouldSkipAnnotation", () => {
+  it("returns false for plain text selection", () => {
+    const doc = "Hello world this is text";
+    // Select "world" (6-11)
+    expect(shouldSkipAnnotation(doc, 6, 11)).toBe(false);
+  });
+
+  it("returns true when selection is entirely inside an existing mark", () => {
+    // doc: prefix + <mark class="c5 anc-abc">selected text</mark> + suffix
+    const doc = 'before <mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">selected text</mark> after';
+    // "selected" is inside the mark tag — find its offset
+    const innerStart = doc.indexOf("selected");
+    const innerEnd = innerStart + "selected".length;
+    expect(shouldSkipAnnotation(doc, innerStart, innerEnd)).toBe(true);
+  });
+
+  it("returns true when selection spans across a mark boundary", () => {
+    const doc = 'Hello <mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">world</mark> foo';
+    // Selection from "Hello " into the mark content — crosses opening <mark
+    const from = 0;
+    const to = doc.indexOf("world") + 3; // "Hel...wor"
+    expect(shouldSkipAnnotation(doc, from, to)).toBe(true);
+  });
+
+  it("returns false when selection is adjacent to a mark but not overlapping", () => {
+    const doc = 'Hello <mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">world</mark> foo';
+    // Select " foo" after the closing </mark>
+    const closingTag = doc.indexOf("</mark>");
+    const from = closingTag + "</mark>".length;
+    const to = from + 4; // " foo"
+    expect(shouldSkipAnnotation(doc, from, to)).toBe(false);
   });
 });
