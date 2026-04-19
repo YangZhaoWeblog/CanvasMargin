@@ -66,6 +66,26 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       callback: () => this.jumpToAnnotation(),
     });
 
+    // ── Post-processor: click-to-jump on rendered <mark> elements ──
+    this.registerMarkdownPostProcessor((el) => {
+      el.querySelectorAll<HTMLElement>("mark").forEach((markEl) => {
+        // Find anc-* class
+        const ancClass = Array.from(markEl.classList).find((c) => c.startsWith("anc-"));
+        if (!ancClass) return;
+        // Idempotency guard
+        if (markEl.dataset.ancBound === "1") return;
+        markEl.dataset.ancBound = "1";
+
+        const ancId = ancClass.slice(4); // strip "anc-"
+        markEl.addClass("canvas-annotator-link");
+        markEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.jumpToCanvasByAncId(ancId);
+        });
+      });
+    });
+
     this.addSettingTab(new CanvasAnnotatorSettingTab(this.app, this));
   }
 
@@ -231,8 +251,11 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       new Notice("光标处没有摘录锚点");
       return;
     }
-    const ancId = m[1];
+    await this.jumpToCanvasByAncId(m[1]);
+  }
 
+  /** Core logic: given an ancId, search all canvas files and zoom to the matching node. */
+  private async jumpToCanvasByAncId(ancId: string) {
     const canvasFiles = this.app.vault.getFiles().filter((f) => f.extension === "canvas");
     for (const file of canvasFiles) {
       const content = await this.app.vault.cachedRead(file);
