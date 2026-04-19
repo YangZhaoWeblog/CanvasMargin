@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scanFileAncs, scanCanvasAncs, computeSyncDiff, nextNodeY } from "../src/syncer";
+import { scanFileAncs, scanCanvasAncs, scanCanvasJsonAncs, computeSyncDiff, nextNodeY } from "../src/syncer";
 
 describe("scanFileAncs", () => {
   it("extracts all anc IDs and their text from a markdown string", () => {
@@ -83,6 +83,21 @@ describe("computeSyncDiff", () => {
     expect(diff.toCreate).toHaveLength(0);
     expect(diff.orphanCount).toBe(0);
   });
+
+  it("global dedup: anc already in another canvas → toCreate empty", () => {
+    // Simulate: vault has anc bbb, canvas A has aaa, canvas B (other file) has bbb
+    // Global allCanvasAncs = union of A + B
+    const vaultAncs = [
+      { ancId: "aaa12345678901234567", text: "text A", sourcePath: "note1.md" },
+      { ancId: "bbb12345678901234567", text: "text B", sourcePath: "note1.md" },
+    ];
+    const allCanvasAncs = new Map([
+      ["aaa12345678901234567", { nodeId: "n1", y: 0, height: 100 }],
+      ["bbb12345678901234567", { nodeId: "n2", y: 100, height: 100 }], // from canvas B
+    ]);
+    const diff = computeSyncDiff(vaultAncs, allCanvasAncs);
+    expect(diff.toCreate).toHaveLength(0);
+  });
 });
 
 describe("nextNodeY", () => {
@@ -96,5 +111,45 @@ describe("nextNodeY", () => {
       ["b".repeat(21), { nodeId: "n2", y: 120, height: 100 }],
     ]);
     expect(nextNodeY(canvasAncs, 20)).toBe(240);
+  });
+});
+
+describe("scanCanvasJsonAncs", () => {
+  it("extracts anc IDs from valid canvas JSON", () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: "n1", type: "text", text: 'hello\n<!--card:{"anc":"abc12345678901234567"}-->', x: 0, y: 0, width: 300, height: 100 },
+        { id: "n2", type: "text", text: "no anchor here", x: 0, y: 100, width: 300, height: 100 },
+        { id: "n3", type: "text", text: '<!--card:{"anc":"def12345678901234567","id":99}-->', x: 0, y: 200, width: 300, height: 100 },
+      ],
+      edges: [],
+    });
+    const result = scanCanvasJsonAncs(json);
+    expect(result.size).toBe(2);
+    expect(result.has("abc12345678901234567")).toBe(true);
+    expect(result.has("def12345678901234567")).toBe(true);
+  });
+
+  it("returns empty Set for malformed JSON (no throw)", () => {
+    expect(() => scanCanvasJsonAncs("{invalid json}")).not.toThrow();
+    expect(scanCanvasJsonAncs("{invalid json}").size).toBe(0);
+  });
+
+  it("returns empty Set when no nodes have anc", () => {
+    const json = JSON.stringify({
+      nodes: [{ id: "n1", type: "text", text: "plain text", x: 0, y: 0, width: 300, height: 100 }],
+      edges: [],
+    });
+    expect(scanCanvasJsonAncs(json).size).toBe(0);
+  });
+
+  it("skips non-text nodes", () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: "n1", type: "file", file: "note.md", x: 0, y: 0, width: 300, height: 100 },
+      ],
+      edges: [],
+    });
+    expect(scanCanvasJsonAncs(json).size).toBe(0);
   });
 });

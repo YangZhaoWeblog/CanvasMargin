@@ -3,10 +3,12 @@ import { annotateSelection } from "./annotator";
 import {
   scanFileAncs,
   scanCanvasAncs,
+  scanCanvasJsonAncs,
   computeSyncDiff,
   nextNodeY,
   createNodes,
   type VaultAnc,
+  type CanvasAncInfo,
 } from "./syncer";
 import { findAncInCanvasJson, findAncInMdContent } from "./jumper";
 import { extractAncFromMeta, ANC_RE } from "./models";
@@ -74,6 +76,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     }
     const canvas = canvasView.canvas;
 
+    // Collect all ancs from all md files in vault
     const allVaultAncs: VaultAnc[] = [];
     const mdFiles = this.app.vault.getMarkdownFiles();
     for (const file of mdFiles) {
@@ -84,21 +87,44 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       }
     }
 
-    const canvasData = canvas.getData();
-    const canvasAncs = scanCanvasAncs(canvasData.nodes);
+    // Build global anc map: union of ALL .canvas files in vault
+    // This prevents duplicating a node that already exists in another canvas
+    const globalCanvasAncs = new Map<string, CanvasAncInfo>();
+    const canvasFiles = this.app.vault.getFiles().filter((f) => f.extension === "canvas");
+    for (const file of canvasFiles) {
+      const json = await this.app.vault.cachedRead(file);
+      const ancIds = scanCanvasJsonAncs(json);
+      // For global dedup we only need the set of IDs; store dummy info
+      for (const ancId of ancIds) {
+        if (!globalCanvasAncs.has(ancId)) {
+          globalCanvasAncs.set(ancId, { nodeId: "", y: 0, height: 0 });
+        }
+      }
+    }
 
-    const diff = computeSyncDiff(allVaultAncs, canvasAncs);
+    // Current canvas ancs (used for orphan count + nextNodeY)
+    const currentCanvasAncs = scanCanvasAncs(canvas.getData().nodes);
+    // Merge current canvas info into global map (so orphan count uses real data)
+    for (const [ancId, info] of currentCanvasAncs) {
+      globalCanvasAncs.set(ancId, info);
+    }
+
+    const diff = computeSyncDiff(allVaultAncs, globalCanvasAncs);
 
     if (diff.toCreate.length === 0) {
       let msg = "已完全同步，无新节点需要创建";
-      if (diff.orphanCount > 0) {
-        msg += `\n发现 ${diff.orphanCount} 个孤儿锚点`;
+      // Orphan count: ancs in current canvas not in vault
+      const orphanCount = [...currentCanvasAncs.keys()].filter(
+        (id) => !allVaultAncs.some((a) => a.ancId === id)
+      ).length;
+      if (orphanCount > 0) {
+        msg += `\n发现 ${orphanCount} 个孤儿锚点`;
       }
       new Notice(msg);
       return;
     }
 
-    const startY = nextNodeY(canvasAncs, this.settings.nodeGap);
+    const startY = nextNodeY(currentCanvasAncs, this.settings.nodeGap);
     const created = createNodes(
       canvas,
       diff.toCreate,
@@ -107,9 +133,14 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       this.settings.nodeGap,
     );
 
+    // Orphan count only for current canvas
+    const orphanCount = [...currentCanvasAncs.keys()].filter(
+      (id) => !allVaultAncs.some((a) => a.ancId === id)
+    ).length;
+
     let msg = `✓ 已创建 ${created} 个新节点`;
-    if (diff.orphanCount > 0) {
-      msg += `，发现 ${diff.orphanCount} 个孤儿锚点`;
+    if (orphanCount > 0) {
+      msg += `，发现 ${orphanCount} 个孤儿锚点`;
     }
     new Notice(msg, 4000);
   }

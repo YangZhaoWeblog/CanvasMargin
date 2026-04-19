@@ -38,6 +38,24 @@ export function scanFileAncs(content: string): FileAnc[] {
   return results;
 }
 
+/** Scan a Canvas JSON string for all anc IDs. Returns a Set of ancIds.
+ * Safe: returns empty Set on malformed JSON. */
+export function scanCanvasJsonAncs(json: string): Set<string> {
+  const result = new Set<string>();
+  try {
+    const data = JSON.parse(json);
+    const nodes: any[] = data.nodes ?? [];
+    for (const node of nodes) {
+      if (node.type !== "text" || !node.text) continue;
+      const anc = extractAncFromMeta(node.text as string);
+      if (anc) result.add(anc);
+    }
+  } catch {
+    // Malformed JSON — return empty set
+  }
+  return result;
+}
+
 /** Scan Canvas node data for all anc IDs in <!--card:{...}--> metadata. */
 export function scanCanvasAncs(
   nodes: Pick<CanvasNodeData, "id" | "type" | "text" | "y" | "height">[]
