@@ -40,6 +40,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       },
     });
 
+    this.addRibbonIcon("lucide-refresh-cw", "Sync annotations to Canvas", () => this.syncAnnotations());
+
     this.addCommand({
       id: "sync-annotations",
       name: "Sync annotations to Canvas",
