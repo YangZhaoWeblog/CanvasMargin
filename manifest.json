@@ -1,0 +1,9 @@
+{
+  "id": "canvas-annotator",
+  "name": "Canvas Annotator",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Highlight text in notes, sync to Canvas nodes, jump bidirectionally",
+  "author": "yangzhao",
+  "isDesktopOnly": true
+}
