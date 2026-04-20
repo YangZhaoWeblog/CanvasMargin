@@ -95,6 +95,12 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       callback: () => this.jumpToAnnotation(),
     });
 
+    // ── Canvas double-click → jump to MD ──
+    this.registerEvent(
+      this.app.workspace.on("layout-change", () => this.bindCanvasDblClick())
+    );
+    this.bindCanvasDblClick();
+
     // ── Post-processor: click-to-jump ──
     this.registerMarkdownPostProcessor((el) => {
       el.querySelectorAll<HTMLElement>("mark").forEach((markEl) => {
@@ -384,27 +390,54 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   }
 
   private async jumpCanvasToMd(canvasView: CanvasView) {
-    const canvas = canvasView.canvas;
-    // Use canvas.selection Set (correct API — replaces is-focused class check)
-    const selectedNodes = [...canvas.selection];
+    const selectedNodes = [...canvasView.canvas.selection];
     if (selectedNodes.length === 0) {
       new Notice("请先选中一个 Canvas 节点");
       return;
     }
-    const node = selectedNodes[0];
-    const nodeData = node.getData();
-    const ancId = extractAncFromMeta(nodeData.text ?? "");
+    const ancId = extractAncFromMeta(selectedNodes[0].getData().text ?? "");
     if (!ancId) {
       new Notice("该节点没有摘录锚点");
       return;
     }
+    await this.jumpMdByAncId(ancId);
+  }
 
+  private getCanvasView(): CanvasView | null {
+    const leaves = this.app.workspace.getLeavesOfType("canvas");
+    if (leaves.length === 0) return null;
+    return leaves[0].view as unknown as CanvasView;
+  }
+
+  /**
+   * Bind a dblclick handler to every open canvas leaf's container.
+   * Uses a data attribute to avoid double-binding.
+   * Called on load and on layout-change (new canvas opened).
+   */
+  private bindCanvasDblClick() {
+    this.app.workspace.getLeavesOfType("canvas").forEach((leaf) => {
+      const container = leaf.view.containerEl;
+      if (container.dataset.ancDblBound === "1") return;
+      container.dataset.ancDblBound = "1";
+      container.addEventListener("dblclick", async (e: MouseEvent) => {
+        const canvasView = leaf.view as unknown as CanvasView;
+        const selected = [...canvasView.canvas.selection];
+        if (selected.length === 0) return;
+        const ancId = extractAncFromMeta(selected[0].getData().text ?? "");
+        if (!ancId) return;
+        e.stopPropagation();
+        await this.jumpMdByAncId(ancId);
+      });
+    });
+  }
+
+  /** Search all md files for ancId and scroll to it. */
+  private async jumpMdByAncId(ancId: string) {
     const mdFiles = this.app.vault.getMarkdownFiles();
     for (const file of mdFiles) {
       const content = await this.app.vault.cachedRead(file);
       const result = findAncInMdContent(content, ancId);
       if (result) {
-        // Reuse existing md leaf for this file, or split a new one
         const existingLeaf = this.app.workspace
           .getLeavesOfType("markdown")
           .find((l) => (l.view as any)?.file?.path === file.path);
@@ -421,11 +454,5 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       }
     }
     new Notice("未找到对应的 md 标记");
-  }
-
-  private getCanvasView(): CanvasView | null {
-    const leaves = this.app.workspace.getLeavesOfType("canvas");
-    if (leaves.length === 0) return null;
-    return leaves[0].view as unknown as CanvasView;
   }
 }
