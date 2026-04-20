@@ -1,5 +1,5 @@
-import { ItemView, MarkdownView, Notice, Plugin } from "obsidian";
-import { annotateSelection, shouldSkipAnnotation } from "./annotator";
+import { MarkdownView, Notice, Plugin } from "obsidian";
+import { annotateSelection, shouldSkipAnnotation, removeAnnotation } from "./annotator";
 import {
   scanFileAncs,
   scanCanvasAncs,
@@ -15,44 +15,55 @@ import { extractAncFromMeta, ANC_RE } from "./models";
 import type { PluginSettings } from "./models";
 import { DEFAULT_SETTINGS } from "./models";
 import { CanvasAnnotatorSettingTab } from "./settings";
-import type { Canvas, CanvasView, CanvasNode } from "./canvas";
+import type { CanvasView } from "./canvas";
+import { FloatingToolbar, getToolbarAction } from "./toolbar";
+import { syncPanelExtension } from "./panel";
 
 export default class CanvasAnnotatorPlugin extends Plugin {
   settings: PluginSettings = { ...DEFAULT_SETTINGS };
-  private silentMode = false;
-  private statusBarItem: HTMLElement | null = null;
+  private toolbar: FloatingToolbar | null = null;
   private mouseupHandler: (() => void) | null = null;
 
   async onload() {
     await this.loadSettings();
 
-    // ── Status bar: silent annotation toggle ──
-    this.statusBarItem = this.addStatusBarItem();
-    this.statusBarItem.addClass("canvas-annotator-status");
-    this.statusBarItem.setText("✎ OFF");
-    this.statusBarItem.title = "Canvas Annotator: 静默摘录 (点击开/关)";
-    this.statusBarItem.addEventListener("click", () => this.toggleSilentMode());
+    // ── CM6 top panel ──
+    this.registerEditorExtension([syncPanelExtension(() => this.syncAnnotations())]);
 
+    // ── Ribbon (backup entry point) ──
+    this.addRibbonIcon("refresh-cw", "Sync annotations to Canvas", () => this.syncAnnotations());
+
+    // ── Floating toolbar ──
+    this.toolbar = new FloatingToolbar(
+      () => {
+        const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!mdView) return;
+        this.doAnnotate(mdView);
+      },
+      () => {
+        const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!mdView) return;
+        this.doRemove(mdView);
+      },
+    );
+
+    // mouseup listener — shows toolbar or auto-annotates
+    this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 50);
+    document.addEventListener("mouseup", this.mouseupHandler);
+
+    // Hide toolbar on scroll
+    document.addEventListener("scroll", () => this.toolbar?.hide(), true);
+
+    // ── Commands ──
     this.addCommand({
       id: "annotate-selection",
       name: "Annotate selection",
-      editorCallback: (editor) => {
-        const selection = editor.getSelection();
-        if (!selection) {
-          new Notice("请先选中文本");
-          return;
-        }
-        const doc = editor.getValue();
-        const from = editor.posToOffset(editor.getCursor("from"));
-        const to = editor.posToOffset(editor.getCursor("to"));
-        const result = annotateSelection(doc, from, to, this.settings.annotationColor);
-        editor.setValue(result.newDoc);
-        editor.setCursor(editor.offsetToPos(to + (result.newDoc.length - doc.length)));
-        new Notice("已摘录");
+      editorCallback: (_editor) => {
+        const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!mdView) return;
+        this.doAnnotate(mdView);
       },
     });
-
-    this.addRibbonIcon("lucide-refresh-cw", "Sync annotations to Canvas", () => this.syncAnnotations());
 
     this.addCommand({
       id: "sync-annotations",
@@ -66,17 +77,14 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       callback: () => this.jumpToAnnotation(),
     });
 
-    // ── Post-processor: click-to-jump on rendered <mark> elements ──
+    // ── Post-processor: click-to-jump ──
     this.registerMarkdownPostProcessor((el) => {
       el.querySelectorAll<HTMLElement>("mark").forEach((markEl) => {
-        // Find anc-* class
         const ancClass = Array.from(markEl.classList).find((c) => c.startsWith("anc-"));
         if (!ancClass) return;
-        // Idempotency guard
         if (markEl.dataset.ancBound === "1") return;
         markEl.dataset.ancBound = "1";
-
-        const ancId = ancClass.slice(4); // strip "anc-"
+        const ancId = ancClass.slice(4);
         markEl.addClass("canvas-annotator-link");
         markEl.addEventListener("click", (e) => {
           e.preventDefault();
@@ -89,6 +97,89 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     this.addSettingTab(new CanvasAnnotatorSettingTab(this.app, this));
   }
 
+  onunload() {
+    if (this.mouseupHandler) {
+      document.removeEventListener("mouseup", this.mouseupHandler);
+    }
+    this.toolbar?.destroy();
+  }
+
+  private handleMouseup() {
+    const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!mdView) {
+      this.toolbar?.hide();
+      return;
+    }
+    const editor = mdView.editor;
+    const doc = editor.getValue();
+    const from = editor.posToOffset(editor.getCursor("from"));
+    const to = editor.posToOffset(editor.getCursor("to"));
+
+    const action = getToolbarAction(doc, from, to);
+
+    if (!action) {
+      this.toolbar?.hide();
+      return;
+    }
+
+    // autoAnnotate mode: skip toolbar, annotate immediately
+    if (action === "annotate" && this.settings.autoAnnotate) {
+      if (!shouldSkipAnnotation(doc, from, to)) {
+        this.doAnnotate(mdView);
+      }
+      return;
+    }
+
+    // Show floating toolbar
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      this.toolbar?.hide();
+      return;
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      this.toolbar?.hide();
+      return;
+    }
+    this.toolbar?.show(action, rect);
+  }
+
+  private doAnnotate(mdView: MarkdownView) {
+    const editor = mdView.editor;
+    const selection = editor.getSelection();
+    if (!selection) {
+      new Notice("请先选中文本");
+      return;
+    }
+    const doc = editor.getValue();
+    const from = editor.posToOffset(editor.getCursor("from"));
+    const to = editor.posToOffset(editor.getCursor("to"));
+    if (shouldSkipAnnotation(doc, from, to)) return;
+
+    const result = annotateSelection(doc, from, to, this.settings.annotationColor);
+    editor.setValue(result.newDoc);
+    editor.setCursor(editor.offsetToPos(to + (result.newDoc.length - doc.length)));
+
+    // autoSync: if a canvas is open, sync immediately
+    if (this.settings.autoSync && this.getCanvasView()) {
+      this.syncAnnotations();
+    }
+  }
+
+  private doRemove(mdView: MarkdownView) {
+    const editor = mdView.editor;
+    const doc = editor.getValue();
+    const from = editor.posToOffset(editor.getCursor("from"));
+    const to = editor.posToOffset(editor.getCursor("to"));
+    const result = removeAnnotation(doc, from, to);
+    if (!result) {
+      new Notice("光标处没有摘录锚点");
+      return;
+    }
+    editor.setValue(result.newDoc);
+    editor.setCursor(editor.offsetToPos(result.from));
+  }
+
   async loadSettings() {
     const data = await this.loadData();
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
@@ -96,58 +187,6 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-
-  onunload() {
-    this.disableSilentMode();
-  }
-
-  private toggleSilentMode() {
-    if (this.silentMode) {
-      this.disableSilentMode();
-    } else {
-      this.enableSilentMode();
-    }
-  }
-
-  private enableSilentMode() {
-    this.silentMode = true;
-    this.statusBarItem?.setText("✎ 摘录");
-    this.statusBarItem?.addClass("canvas-annotator-status--active");
-    this.mouseupHandler = () => {
-      // Debounce 10ms to let the selection stabilise
-      setTimeout(() => this.handleSilentMouseup(), 10);
-    };
-    document.addEventListener("mouseup", this.mouseupHandler);
-  }
-
-  private disableSilentMode() {
-    this.silentMode = false;
-    this.statusBarItem?.setText("✎ OFF");
-    this.statusBarItem?.removeClass("canvas-annotator-status--active");
-    if (this.mouseupHandler) {
-      document.removeEventListener("mouseup", this.mouseupHandler);
-      this.mouseupHandler = null;
-    }
-  }
-
-  private handleSilentMouseup() {
-    const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!mdView) return;
-    const editor = mdView.editor;
-    const selection = editor.getSelection();
-    if (!selection) return;
-
-    const doc = editor.getValue();
-    const from = editor.posToOffset(editor.getCursor("from"));
-    const to = editor.posToOffset(editor.getCursor("to"));
-
-    // Skip if selection overlaps an existing mark
-    if (shouldSkipAnnotation(doc, from, to)) return;
-
-    const result = annotateSelection(doc, from, to, this.settings.annotationColor);
-    editor.setValue(result.newDoc);
-    editor.setCursor(editor.offsetToPos(to + (result.newDoc.length - doc.length)));
   }
 
   private async syncAnnotations() {
