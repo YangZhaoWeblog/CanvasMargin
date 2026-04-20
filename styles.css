@@ -51,3 +51,26 @@ mark.c6 { background: var(--color-purple); }
 .canvas-annotator-toolbar button:hover {
   background: var(--background-modifier-hover);
 }
+
+/* Top sync panel */
+.canvas-annotator-sync-panel {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.canvas-annotator-sync-panel button {
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 10px;
+  color: var(--text-muted);
+}
+.canvas-annotator-sync-panel button:hover {
+  color: var(--text-normal);
+  border-color: var(--text-muted);
+}
