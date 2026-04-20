@@ -23,6 +23,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   settings: PluginSettings = { ...DEFAULT_SETTINGS };
   private toolbar: FloatingToolbar | null = null;
   private mouseupHandler: (() => void) | null = null;
+  private scrollHandler: (() => void) | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -52,7 +53,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     document.addEventListener("mouseup", this.mouseupHandler);
 
     // Hide toolbar on scroll
-    document.addEventListener("scroll", () => this.toolbar?.hide(), true);
+    this.scrollHandler = () => this.toolbar?.hide();
+    document.addEventListener("scroll", this.scrollHandler, true);
 
     // ── Commands ──
     this.addCommand({
@@ -100,6 +102,9 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   onunload() {
     if (this.mouseupHandler) {
       document.removeEventListener("mouseup", this.mouseupHandler);
+    }
+    if (this.scrollHandler) {
+      document.removeEventListener("scroll", this.scrollHandler, true);
     }
     this.toolbar?.destroy();
   }
