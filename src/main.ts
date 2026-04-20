@@ -165,9 +165,9 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     editor.setValue(result.newDoc);
     editor.setCursor(editor.offsetToPos(to + (result.newDoc.length - doc.length)));
 
-    // autoSync: if a canvas is open, sync immediately
+    // autoSync: pass the new anc directly to avoid vault cache staleness
     if (this.settings.autoSync && this.getCanvasView()) {
-      await this.syncAnnotations();
+      await this.syncAnnotations({ ancId: result.ancId, text: selection });
     }
   }
 
@@ -194,7 +194,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  private async syncAnnotations() {
+  private async syncAnnotations(immediate?: { ancId: string; text: string }) {
     const canvasView = this.getCanvasView();
     if (!canvasView) {
       new Notice("请先打开一个 Canvas 文件");
@@ -202,6 +202,22 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     }
     const canvas = canvasView.canvas;
 
+    // Fast path: called from doAnnotate with fresh anc — skip vault cache
+    if (immediate) {
+      const currentCanvasAncs = scanCanvasAncs(canvas.getData().nodes);
+      if (currentCanvasAncs.has(immediate.ancId)) return; // already exists
+      const startY = nextNodeY(currentCanvasAncs, this.settings.nodeGap);
+      createNodes(
+        canvas,
+        [{ ancId: immediate.ancId, text: immediate.text, sourcePath: "" }],
+        startY,
+        this.settings.annotationColor,
+        this.settings.nodeGap,
+      );
+      return;
+    }
+
+    // Full sync path: scan vault
     // Collect all ancs from all md files in vault
     const allVaultAncs: VaultAnc[] = [];
     const mdFiles = this.app.vault.getMarkdownFiles();

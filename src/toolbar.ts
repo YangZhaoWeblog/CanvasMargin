@@ -29,8 +29,9 @@ export function getToolbarAction(
     // Case 1: cursor/selection entirely within inner text
     if (from >= openEnd && to <= closeStart) return "remove";
 
-    // Case 2: selection overlaps the mark tag itself (e.g. user selected the raw <mark ...>text</mark>)
-    if (from < closeEnd && to > openStart) return "remove";
+    // Case 2: selection overlaps any part of the full mark tag (openStart..closeEnd)
+    // Use >= openStart so cursor AT the opening < also triggers "remove"
+    if (from < closeEnd && to >= openStart) return "remove";
   }
 
   if (hasSelection) return "annotate";

@@ -24,4 +24,16 @@ describe("getToolbarAction", () => {
     const innerEnd = innerStart + 3;
     expect(getToolbarAction(doc, innerStart, innerEnd)).toBe("remove");
   });
+
+  it("returns 'remove' when cursor is at the very start of the opening tag", () => {
+    // Regression: clicking a rendered mark in Live Preview lands cursor at openStart
+    const doc = 'before <mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hello</mark> after';
+    const openStart = doc.indexOf("<mark");
+    expect(getToolbarAction(doc, openStart, openStart)).toBe("remove");
+  });
+
+  it("returns 'remove' when selection covers the entire mark tag including brackets", () => {
+    const doc = '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hello</mark>';
+    expect(getToolbarAction(doc, 0, doc.length)).toBe("remove");
+  });
 });
