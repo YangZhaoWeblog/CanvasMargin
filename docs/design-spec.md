@@ -9,7 +9,7 @@
 ## 范围
 
 **做：** md 高亮摘录 → Canvas 节点创建 + 双向跳转。
-**不做：** Anki 导出（canvas2anki 负责）、自动同步文本变更、自动删除。
+**不做：** Anki 导出（canvas2anki 负责）、自动同步文本变更、删除联动（见下方产品决策）。
 
 ---
 
@@ -111,7 +111,9 @@ JS 侧提取锚点：`el.className.match(/anc-([A-Za-z0-9_-]{21})/)?.[1]`
 ### 多文件关系
 
 - 多个 md → 同一个 Canvas ✓（nanoid 全局唯一，无冲突）
-- 同步时扫描全 vault 的 `data-anc` vs Canvas 中所有 `anc`，差集 = 新建节点
+- 一个 md → 多个 Canvas ✓（不同时间分别同步）
+- 但每次同步操作严格 1:1（当前可见的 md → 当前可见的 canvas）
+- 同一个 anc 全局唯一，不会出现在多个 canvas 中
 
 ---
 
@@ -123,16 +125,33 @@ JS 侧提取锚点：`el.className.match(/anc-([A-Za-z0-9_-]{21})/)?.[1]`
 
 ### 目标 Canvas
 
-当前打开的 Canvas（active leaf）。未打开 Canvas → toast 提示。
+当前 split 中可见的 Canvas（`leaf.view.containerEl.isShown()`），不是 `leaves[0]`。详见上方同步范围。
+
+### 同步范围（2026-04-20 圆桌决议）
+
+**规则：1 个可见 md ↔ 1 个可见 canvas，严格一一对应。**
+
+"可见" = split 面板中正在显示的 leaf，不是 tab 栏里打开但被遮挡的。判断方式：`leaf.view.containerEl.isShown()`（Obsidian 在 HTMLElement 上暴露的公开方法）。
+
+| split 中可见 md | split 中可见 canvas | 行为 |
+|---|---|---|
+| 1 | 1 | 同步该 md → 该 canvas |
+| 0 | any | Notice："请先打开笔记文件" |
+| any | 0 | Notice："请先打开 Canvas" |
+| >1 | any | Notice："无法确定同步哪个笔记，请只保留一个可见" |
+| any | >1 | Notice："无法确定同步到哪个 Canvas，请只保留一个可见" |
+
+**去重：全局。** 同一个 anc 只能存在于一个 canvas。同步时扫描全库 `.canvas` 文件做去重，如果该 anc 已存在于其他 canvas 则跳过。
 
 ### 同步逻辑
 
 ```
-1. 获取当前 Canvas 中所有 anc 集合: existing_ancs
-2. 扫描 vault 所有 md 中的 class="...anc-xxx...": all_ancs (含 source file + text)
-3. 差集: new_ancs = all_ancs - existing_ancs
-4. 对每个 new_anc: 通过 Canvas API 创建节点
-5. 报告: "N 个新节点, M 个孤儿"
+1. 检查可见 leaf：恰好 1 md + 1 canvas，否则报错
+2. 读取可见 md 的所有 anc: file_ancs
+3. 扫描全库 .canvas 文件的所有 anc: global_canvas_ancs（全局去重）
+4. 差集: new_ancs = file_ancs - global_canvas_ancs
+5. 创建节点到可见 canvas
+6. 报告: "N 个新节点, M 个孤儿"
 ```
 
 ### Canvas 写入
@@ -246,7 +265,7 @@ canvas-annotator/
 
 - Toolbar 选色模式（砍掉，less is more）
 - 自动同步 / 文件监听
-- 摘录删除联动（创建后独立）
+- 摘录删除联动（创建后独立，2026-04-20 圆桌确认不实现，见产品决策）
 - 文本变更同步
 - 嵌入式跳转链接（URI scheme）
 - CodeMirror decoration 点击跳转（V2）

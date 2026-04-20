@@ -1,4 +1,4 @@
-import { MarkdownView, Notice, Plugin } from "obsidian";
+import { MarkdownView, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
 import { annotateSelection, shouldSkipAnnotation, removeAnnotation } from "./annotator";
 import {
   scanFileAncs,
@@ -212,9 +212,12 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     editor.setValue(result.newDoc);
     editor.setCursor(editor.offsetToPos(to + (result.newDoc.length - doc.length)));
 
-    // autoSync: pass the new anc directly to avoid vault cache staleness
-    if (this.settings.autoSync && this.getCanvasView()) {
-      await this.syncAnnotations({ ancId: result.ancId, text: selection });
+    // autoSync: pass the new anc directly — only if split pair is valid
+    if (this.settings.autoSync) {
+      const { error: syncError } = this.getVisibleSplitPair();
+      if (!syncError) {
+        await this.syncAnnotations({ ancId: result.ancId, text: selection });
+      }
     }
   }
 
@@ -242,11 +245,12 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   }
 
   private async syncAnnotations(immediate?: { ancId: string; text: string }) {
-    const canvasView = this.getCanvasView();
-    if (!canvasView) {
-      new Notice("请先打开一个 Canvas 文件");
+    const { canvasLeaf, mdLeaf, error } = this.getVisibleSplitPair();
+    if (error || !canvasLeaf || !mdLeaf) {
+      new Notice(error ?? "请在分屏中打开笔记和 Canvas");
       return;
     }
+    const canvasView = canvasLeaf.view as unknown as CanvasView;
     const canvas = canvasView.canvas;
 
     // Fast path: called from doAnnotate with fresh anc — skip vault cache
@@ -264,15 +268,14 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       return;
     }
 
-    // Full sync path: scan vault
-    // Collect all ancs from all md files in vault
+    // Full sync path: scan only the visible md file
     const allVaultAncs: VaultAnc[] = [];
-    const mdFiles = this.app.vault.getMarkdownFiles();
-    for (const file of mdFiles) {
-      const content = await this.app.vault.cachedRead(file);
+    const mdView = mdLeaf.view as MarkdownView;
+    if (mdView.file) {
+      const content = await this.app.vault.cachedRead(mdView.file);
       const fileAncs = scanFileAncs(content);
       for (const fa of fileAncs) {
-        allVaultAncs.push({ ...fa, sourcePath: file.path });
+        allVaultAncs.push({ ...fa, sourcePath: mdView.file.path });
       }
     }
 
@@ -407,6 +410,37 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     const leaves = this.app.workspace.getLeavesOfType("canvas");
     if (leaves.length === 0) return null;
     return leaves[0].view as unknown as CanvasView;
+  }
+
+  /**
+   * Find exactly 1 visible md leaf + 1 visible canvas leaf in the current split layout.
+   * "Visible" = shown in a split pane (not hidden behind a tab).
+   */
+  private getVisibleSplitPair(): {
+    mdLeaf: WorkspaceLeaf | null;
+    canvasLeaf: WorkspaceLeaf | null;
+    error: string | null;
+  } {
+    const visibleMd: WorkspaceLeaf[] = [];
+    const visibleCanvas: WorkspaceLeaf[] = [];
+
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (!leaf.view?.containerEl?.isShown()) return;
+      const vt = leaf.view.getViewType();
+      if (vt === "markdown") visibleMd.push(leaf);
+      else if (vt === "canvas") visibleCanvas.push(leaf);
+    });
+
+    if (visibleMd.length === 0)
+      return { mdLeaf: null, canvasLeaf: null, error: "请先打开笔记文件" };
+    if (visibleCanvas.length === 0)
+      return { mdLeaf: null, canvasLeaf: null, error: "请先打开 Canvas" };
+    if (visibleMd.length > 1)
+      return { mdLeaf: null, canvasLeaf: null, error: "检测到多个可见笔记，请只保留一个" };
+    if (visibleCanvas.length > 1)
+      return { mdLeaf: null, canvasLeaf: null, error: "检测到多个可见 Canvas，请只保留一个" };
+
+    return { mdLeaf: visibleMd[0], canvasLeaf: visibleCanvas[0], error: null };
   }
 
   /**
