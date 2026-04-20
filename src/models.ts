@@ -50,9 +50,13 @@ export function buildNodeText(text: string, ancId: string): string {
 export interface PluginSettings {
   annotationColor: string; // "1"-"6"
   nodeGap: number;         // px between auto-placed nodes
+  autoAnnotate: boolean;   // silent mode: mouseup with selection → annotate immediately
+  autoSync: boolean;       // after annotating, sync to open Canvas immediately
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   annotationColor: "5",
   nodeGap: 20,
+  autoAnnotate: false,
+  autoSync: false,
 };
