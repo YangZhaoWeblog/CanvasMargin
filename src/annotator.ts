@@ -54,3 +54,39 @@ export function shouldSkipAnnotation(doc: string, from: number, to: number): boo
 
   return false;
 }
+
+export interface RemoveResult {
+  newDoc: string;
+  from: number; // start of plain text in new doc
+  to: number;   // end of plain text in new doc
+}
+
+/**
+ * Find the <mark> tag containing the cursor/selection [from, to) and strip it.
+ * Returns null if no mark contains the position.
+ */
+export function removeAnnotation(doc: string, from: number, to: number): RemoveResult | null {
+  const openRe = /<mark\s[^>]*>/g;
+  const closeStr = "</mark>";
+
+  let m: RegExpExecArray | null;
+  while ((m = openRe.exec(doc)) !== null) {
+    const openStart = m.index;
+    const openEnd = openStart + m[0].length;
+    const closeStart = doc.indexOf(closeStr, openEnd);
+    if (closeStart === -1) continue;
+    const closeEnd = closeStart + closeStr.length;
+
+    // Check if [from, to) is within the inner text [openEnd, closeStart]
+    if (from >= openEnd && to <= closeStart) {
+      const innerText = doc.slice(openEnd, closeStart);
+      const newDoc = doc.slice(0, openStart) + innerText + doc.slice(closeEnd);
+      return {
+        newDoc,
+        from: openStart,
+        to: openStart + innerText.length,
+      };
+    }
+  }
+  return null;
+}

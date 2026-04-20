@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { annotateSelection, shouldSkipAnnotation } from "../src/annotator";
+import { annotateSelection, shouldSkipAnnotation, removeAnnotation } from "../src/annotator";
 
 describe("annotateSelection", () => {
   it("wraps plain selected text with mark tag", () => {
@@ -76,5 +76,37 @@ describe("shouldSkipAnnotation", () => {
     const from = closingTag + "</mark>".length;
     const to = from + 4; // " foo"
     expect(shouldSkipAnnotation(doc, from, to)).toBe(false);
+  });
+});
+
+describe("removeAnnotation", () => {
+  it("removes a mark tag when cursor is inside it, returning plain text", () => {
+    const doc = 'before <mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hello world</mark> after';
+    const innerStart = doc.indexOf("hello");
+    const result = removeAnnotation(doc, innerStart, innerStart);
+    expect(result).not.toBeNull();
+    expect(result!.newDoc).toBe("before hello world after");
+    expect(result!.from).toBe("before ".length);
+    expect(result!.to).toBe("before hello world".length);
+  });
+
+  it("removes a mark tag when selection overlaps the inner text", () => {
+    const doc = 'x <mark class="c3 anc-abcdefghij1234567890A">foo bar</mark> y';
+    const innerStart = doc.indexOf("foo");
+    const innerEnd = innerStart + 3;
+    const result = removeAnnotation(doc, innerStart, innerEnd);
+    expect(result).not.toBeNull();
+    expect(result!.newDoc).toBe("x foo bar y");
+  });
+
+  it("returns null when cursor is not inside any mark", () => {
+    const doc = 'plain text without any marks';
+    expect(removeAnnotation(doc, 5, 5)).toBeNull();
+  });
+
+  it("returns null when cursor is in text after a mark, not inside it", () => {
+    const doc = '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hi</mark> after';
+    const afterMark = doc.indexOf(" after") + 1;
+    expect(removeAnnotation(doc, afterMark, afterMark)).toBeNull();
   });
 });
