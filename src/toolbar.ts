@@ -24,8 +24,13 @@ export function getToolbarAction(
     const openEnd = openStart + m[0].length;
     const closeStart = doc.indexOf(closeStr, openEnd);
     if (closeStart === -1) continue;
+    const closeEnd = closeStart + closeStr.length;
 
+    // Case 1: cursor/selection entirely within inner text
     if (from >= openEnd && to <= closeStart) return "remove";
+
+    // Case 2: selection overlaps the mark tag itself (e.g. user selected the raw <mark ...>text</mark>)
+    if (from < closeEnd && to > openStart) return "remove";
   }
 
   if (hasSelection) return "annotate";

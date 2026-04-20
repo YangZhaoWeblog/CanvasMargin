@@ -149,7 +149,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     this.toolbar?.show(action, rect);
   }
 
-  private doAnnotate(mdView: MarkdownView) {
+  private async doAnnotate(mdView: MarkdownView) {
     const editor = mdView.editor;
     const selection = editor.getSelection();
     if (!selection) {
@@ -167,7 +167,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
     // autoSync: if a canvas is open, sync immediately
     if (this.settings.autoSync && this.getCanvasView()) {
-      this.syncAnnotations();
+      await this.syncAnnotations();
     }
   }
 
