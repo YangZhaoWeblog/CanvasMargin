@@ -77,8 +77,10 @@ export function removeAnnotation(doc: string, from: number, to: number): RemoveR
     if (closeStart === -1) continue;
     const closeEnd = closeStart + closeStr.length;
 
-    // Check if [from, to) is within the inner text [openEnd, closeStart]
-    if (from >= openEnd && to <= closeStart) {
+    // Match: selection within inner text, OR selection overlaps the mark tag itself
+    const withinInner = from >= openEnd && to <= closeStart;
+    const overlapsTag = from < closeEnd && to > openStart;
+    if (withinInner || overlapsTag) {
       const innerText = doc.slice(openEnd, closeStart);
       const newDoc = doc.slice(0, openStart) + innerText + doc.slice(closeEnd);
       return {
