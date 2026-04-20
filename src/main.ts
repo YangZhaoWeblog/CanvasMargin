@@ -261,11 +261,15 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       const content = await this.app.vault.cachedRead(file);
       const result = findAncInCanvasJson(content, ancId);
       if (result) {
-        const leaf = this.app.workspace.getLeaf(false);
+        // Reuse existing canvas leaf for this file, or split a new one
+        const existingLeaf = this.app.workspace
+          .getLeavesOfType("canvas")
+          .find((l) => (l.view as any)?.file?.path === file.path);
+        const leaf = existingLeaf ?? this.app.workspace.getLeaf("split");
         await leaf.openFile(file);
         setTimeout(() => {
-          const cv = this.getCanvasView();
-          if (!cv) return;
+          const cv = leaf.view as unknown as CanvasView;
+          if (!cv?.canvas) return;
           const node = cv.canvas.nodes.get(result.nodeId);
           if (node) {
             cv.canvas.selectOnly(node);
@@ -280,9 +284,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
   private async jumpCanvasToMd(canvasView: CanvasView) {
     const canvas = canvasView.canvas;
-    const selectedNodes = [...canvas.nodes.values()].filter(
-      (n: any) => n.nodeEl?.hasClass?.("is-focused") || false
-    );
+    // Use canvas.selection Set (correct API — replaces is-focused class check)
+    const selectedNodes = [...canvas.selection];
     if (selectedNodes.length === 0) {
       new Notice("请先选中一个 Canvas 节点");
       return;
@@ -300,11 +303,15 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       const content = await this.app.vault.cachedRead(file);
       const result = findAncInMdContent(content, ancId);
       if (result) {
-        const leaf = this.app.workspace.getLeaf(false);
+        // Reuse existing md leaf for this file, or split a new one
+        const existingLeaf = this.app.workspace
+          .getLeavesOfType("markdown")
+          .find((l) => (l.view as any)?.file?.path === file.path);
+        const leaf = existingLeaf ?? this.app.workspace.getLeaf("split");
         await leaf.openFile(file);
         setTimeout(() => {
-          const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (!mdView) return;
+          const mdView = leaf.view as unknown as MarkdownView;
+          if (!mdView?.editor) return;
           const pos = mdView.editor.offsetToPos(result.offset);
           mdView.editor.setCursor(pos);
           mdView.editor.scrollIntoView({ from: pos, to: pos }, true);
