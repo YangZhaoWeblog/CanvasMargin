@@ -24,6 +24,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   private toolbar: FloatingToolbar | null = null;
   private mouseupHandler: (() => void) | null = null;
   private scrollHandler: (() => void) | null = null;
+  private suppressScrollUntil = 0; // timestamp: ignore scroll events before this
 
   async onload() {
     await this.loadSettings();
@@ -49,11 +50,14 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     );
 
     // mouseup listener — shows toolbar or auto-annotates
-    this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 50);
+    this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 150);
     document.addEventListener("mouseup", this.mouseupHandler);
 
-    // Hide toolbar on scroll
-    this.scrollHandler = () => this.toolbar?.hide();
+    // Hide toolbar on scroll — but not if we just showed it (suppress race condition)
+    this.scrollHandler = () => {
+      if (Date.now() < this.suppressScrollUntil) return;
+      this.toolbar?.hide();
+    };
     document.addEventListener("scroll", this.scrollHandler, true);
 
     // ── Commands ──
@@ -146,6 +150,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       this.toolbar?.hide();
       return;
     }
+    // Suppress scroll-hide for 300ms after showing — prevents CM6 reflow race
+    this.suppressScrollUntil = Date.now() + 300;
     this.toolbar?.show(action, rect);
   }
 
