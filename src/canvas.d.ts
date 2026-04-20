@@ -38,6 +38,7 @@ export interface CanvasNode {
 
 export interface Canvas {
   nodes: Map<string, CanvasNode>;
+  selection: Set<CanvasNode>;
   createTextNode(options: {
     pos: { x: number; y: number };
     size: { width: number; height: number };
