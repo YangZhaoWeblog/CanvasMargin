@@ -24,12 +24,10 @@ export function annotateSelection(
  * Returns true if the selection [from, to) overlaps with an existing <mark> tag,
  * meaning the selection should NOT be re-annotated.
  *
- * Detects two cases:
- * 1. Selection is entirely inside a mark's inner text
- * 2. Selection spans across a mark tag boundary (partial overlap)
+ * Supports both new (id="anc-xxx") and old (class="cN anc-xxx") formats.
  */
 export function shouldSkipAnnotation(doc: string, from: number, to: number): boolean {
-  // Find all <mark ...> positions in the document
+  // Match both new format (id=) and old format (class=) mark tags
   const openRe = /<mark\s[^>]*>/g;
   const closeStr = "</mark>";
 

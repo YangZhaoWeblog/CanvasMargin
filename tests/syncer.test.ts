@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { scanFileAncs, scanCanvasAncs, scanCanvasJsonAncs, computeSyncDiff, nextNodeY } from "../src/syncer";
 
 describe("scanFileAncs", () => {
-  it("extracts all anc IDs and their text from a markdown string", () => {
+  it("extracts anc IDs from new id= format", () => {
     const md = [
       'Some text before',
-      '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">highlighted one</mark>',
+      '<mark class="c5" id="anc-V1StGXR8_Z5jdHi6B-myT">highlighted one</mark>',
       'middle text',
-      '<mark class="c3 anc-abcdefghij1234567890A">highlighted two</mark>',
+      '<mark class="c3" id="anc-abcdefghij1234567890A">highlighted two</mark>',
       'end text',
     ].join("\n");
     const result = scanFileAncs(md);
@@ -16,12 +16,32 @@ describe("scanFileAncs", () => {
     expect(result[1]).toEqual({ ancId: "abcdefghij1234567890A", text: "highlighted two" });
   });
 
+  it("extracts anc IDs from old class= format (backward compat)", () => {
+    const md = [
+      '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">highlighted one</mark>',
+      '<mark class="c3 anc-abcdefghij1234567890A">highlighted two</mark>',
+    ].join("\n");
+    const result = scanFileAncs(md);
+    expect(result).toHaveLength(2);
+    expect(result[0].ancId).toBe("V1StGXR8_Z5jdHi6B-myT");
+    expect(result[1].ancId).toBe("abcdefghij1234567890A");
+  });
+
+  it("deduplicates if same ancId appears in both formats", () => {
+    // Shouldn't happen in practice, but dedupe is safe
+    const md = [
+      '<mark class="c5" id="anc-V1StGXR8_Z5jdHi6B-myT">new</mark>',
+      '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">old</mark>',
+    ].join("\n");
+    expect(scanFileAncs(md)).toHaveLength(1);
+  });
+
   it("returns empty array when no marks", () => {
     expect(scanFileAncs("plain text")).toEqual([]);
   });
 
-  it("handles mark tag spanning multiple words", () => {
-    const md = '<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hello world foo</mark>';
+  it("handles mark tag spanning multiple words (new format)", () => {
+    const md = '<mark class="c5" id="anc-V1StGXR8_Z5jdHi6B-myT">hello world foo</mark>';
     const result = scanFileAncs(md);
     expect(result).toHaveLength(1);
     expect(result[0].text).toBe("hello world foo");

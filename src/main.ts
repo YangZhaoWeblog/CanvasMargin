@@ -23,8 +23,11 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   settings: PluginSettings = { ...DEFAULT_SETTINGS };
   private toolbar: FloatingToolbar | null = null;
   private mouseupHandler: (() => void) | null = null;
+  private mousedownHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
   private suppressScrollUntil = 0; // timestamp: ignore scroll events before this
+  /** Rect of a mark element captured on mousedown, before CM6 collapses the decoration. */
+  private pendingRemoveRect: DOMRect | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -52,6 +55,15 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     // mouseup listener — shows toolbar or auto-annotates
     this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 150);
     document.addEventListener("mouseup", this.mouseupHandler);
+
+    // mousedown listener — capture mark rect BEFORE CM6 collapses the decoration
+    this.mousedownHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // New format: id="anc-xxx"; old format: class contains "anc-"
+      const markEl = target.closest?.('mark[id^="anc-"], mark[class*="anc-"]') as HTMLElement | null;
+      this.pendingRemoveRect = markEl ? markEl.getBoundingClientRect() : null;
+    };
+    document.addEventListener("mousedown", this.mousedownHandler);
 
     // Hide toolbar on scroll — but not if we just showed it (suppress race condition)
     this.scrollHandler = () => {
@@ -86,16 +98,26 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     // ── Post-processor: click-to-jump ──
     this.registerMarkdownPostProcessor((el) => {
       el.querySelectorAll<HTMLElement>("mark").forEach((markEl) => {
-        const ancClass = Array.from(markEl.classList).find((c) => c.startsWith("anc-"));
-        if (!ancClass) return;
         if (markEl.dataset.ancBound === "1") return;
+
+        // New format: id="anc-xxx"
+        let ancId: string | null = null;
+        const id = markEl.id;
+        if (id?.startsWith("anc-")) {
+          ancId = id.slice(4);
+        } else {
+          // Old format: class="cN anc-xxx"
+          const ancClass = Array.from(markEl.classList).find((c) => c.startsWith("anc-"));
+          if (ancClass) ancId = ancClass.slice(4);
+        }
+        if (!ancId) return;
+
         markEl.dataset.ancBound = "1";
-        const ancId = ancClass.slice(4);
         markEl.addClass("canvas-annotator-link");
         markEl.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          this.jumpToCanvasByAncId(ancId);
+          this.jumpToCanvasByAncId(ancId!);
         });
       });
     });
@@ -107,6 +129,9 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     if (this.mouseupHandler) {
       document.removeEventListener("mouseup", this.mouseupHandler);
     }
+    if (this.mousedownHandler) {
+      document.removeEventListener("mousedown", this.mousedownHandler);
+    }
     if (this.scrollHandler) {
       document.removeEventListener("scroll", this.scrollHandler, true);
     }
@@ -114,6 +139,16 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   }
 
   private handleMouseup() {
+    // Fast path: mousedown captured a mark element's rect before CM6 collapsed it.
+    // Use that rect directly — bypasses unreliable getCursor() timing entirely.
+    if (this.pendingRemoveRect) {
+      const rect = this.pendingRemoveRect;
+      this.pendingRemoveRect = null;
+      this.suppressScrollUntil = Date.now() + 300;
+      this.toolbar?.show("remove", rect);
+      return;
+    }
+
     const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!mdView) {
       this.toolbar?.hide();

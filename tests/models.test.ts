@@ -69,9 +69,9 @@ describe("extractAncFromMeta", () => {
 });
 
 describe("buildMarkTag", () => {
-  it("wraps text with mark tag containing color and anchor classes", () => {
+  it("wraps text with mark tag using id= attribute (new format)", () => {
     const result = buildMarkTag("hello world", "5", "V1StGXR8_Z5jdHi6B-myT");
-    expect(result).toBe('<mark class="c5 anc-V1StGXR8_Z5jdHi6B-myT">hello world</mark>');
+    expect(result).toBe('<mark class="c5" id="anc-V1StGXR8_Z5jdHi6B-myT">hello world</mark>');
   });
 });
 

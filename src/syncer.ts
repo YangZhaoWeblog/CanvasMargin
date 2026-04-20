@@ -1,4 +1,5 @@
 import {
+  ANC_ID_RE_GLOBAL,
   ANC_CLASS_RE_GLOBAL,
   extractAncFromMeta,
   buildNodeText,
@@ -27,13 +28,24 @@ export interface SyncDiff {
   orphanCount: number;
 }
 
-/** Scan a single md file's content for all <mark class="cN anc-xxx">text</mark> entries. */
+/**
+ * Scan a single md file's content for all annotated marks.
+ * Supports both new format (id="anc-xxx") and old format (class="cN anc-xxx").
+ */
 export function scanFileAncs(content: string): FileAnc[] {
   const results: FileAnc[] = [];
+  const seen = new Set<string>();
   let m: RegExpExecArray | null;
-  const re = new RegExp(ANC_CLASS_RE_GLOBAL.source, "g");
-  while ((m = re.exec(content)) !== null) {
-    results.push({ ancId: m[1], text: m[2] });
+
+  // New format: id="anc-xxx"
+  const reNew = new RegExp(ANC_ID_RE_GLOBAL.source, "g");
+  while ((m = reNew.exec(content)) !== null) {
+    if (!seen.has(m[1])) { seen.add(m[1]); results.push({ ancId: m[1], text: m[2] }); }
+  }
+  // Old format: class="cN anc-xxx" (backward compat)
+  const reOld = new RegExp(ANC_CLASS_RE_GLOBAL.source, "g");
+  while ((m = reOld.exec(content)) !== null) {
+    if (!seen.has(m[1])) { seen.add(m[1]); results.push({ ancId: m[1], text: m[2] }); }
   }
   return results;
 }
