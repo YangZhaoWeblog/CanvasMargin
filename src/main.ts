@@ -11,31 +11,23 @@ import {
   type CanvasAncInfo,
 } from "./syncer";
 import { findAncInCanvasJson, findAncInMdContent } from "./jumper";
-import { extractAncFromMeta, ANC_RE } from "./models";
+import { readMarginMeta, ANC_RE } from "./models";
 import type { PluginSettings } from "./models";
 import { DEFAULT_SETTINGS } from "./models";
 import { CanvasAnnotatorSettingTab } from "./settings";
 import type { CanvasView } from "./canvas";
 import { FloatingToolbar, getToolbarAction } from "./toolbar";
-import { syncPanelExtension } from "./panel";
 
 export default class CanvasAnnotatorPlugin extends Plugin {
   settings: PluginSettings = { ...DEFAULT_SETTINGS };
   private toolbar: FloatingToolbar | null = null;
   private mouseupHandler: (() => void) | null = null;
-  private mousedownHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
-  private suppressScrollUntil = 0; // timestamp: ignore scroll events before this
-  /** Rect of a mark element captured on mousedown, before CM6 collapses the decoration. */
-  private pendingRemoveRect: DOMRect | null = null;
 
   async onload() {
     await this.loadSettings();
 
-    // ── CM6 top panel ──
-    this.registerEditorExtension([syncPanelExtension(() => this.syncAnnotations())]);
-
-    // ── Ribbon (backup entry point) ──
+    // ── Ribbon ──
     this.addRibbonIcon("refresh-cw", "Sync annotations to Canvas", () => this.syncAnnotations());
 
     // ── Floating toolbar ──
@@ -56,20 +48,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 150);
     document.addEventListener("mouseup", this.mouseupHandler);
 
-    // mousedown listener — capture mark rect BEFORE CM6 collapses the decoration
-    this.mousedownHandler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // New format: id="anc-xxx"; old format: class contains "anc-"
-      const markEl = target.closest?.('mark[id^="anc-"], mark[class*="anc-"]') as HTMLElement | null;
-      this.pendingRemoveRect = markEl ? markEl.getBoundingClientRect() : null;
-    };
-    document.addEventListener("mousedown", this.mousedownHandler);
-
-    // Hide toolbar on scroll — but not if we just showed it (suppress race condition)
-    this.scrollHandler = () => {
-      if (Date.now() < this.suppressScrollUntil) return;
-      this.toolbar?.hide();
-    };
+    // Hide toolbar on scroll
+    this.scrollHandler = () => { this.toolbar?.hide(); };
     document.addEventListener("scroll", this.scrollHandler, true);
 
     // ── Commands ──
@@ -135,9 +115,6 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     if (this.mouseupHandler) {
       document.removeEventListener("mouseup", this.mouseupHandler);
     }
-    if (this.mousedownHandler) {
-      document.removeEventListener("mousedown", this.mousedownHandler);
-    }
     if (this.scrollHandler) {
       document.removeEventListener("scroll", this.scrollHandler, true);
     }
@@ -145,26 +122,23 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   }
 
   private handleMouseup() {
-    // Fast path: mousedown captured a mark element's rect before CM6 collapsed it.
-    // Use that rect directly — bypasses unreliable getCursor() timing entirely.
-    if (this.pendingRemoveRect) {
-      const rect = this.pendingRemoveRect;
-      this.pendingRemoveRect = null;
-      this.suppressScrollUntil = Date.now() + 300;
-      this.toolbar?.show("remove", rect);
-      return;
-    }
-
     const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!mdView) {
       this.toolbar?.hide();
       return;
     }
+
     const editor = mdView.editor;
-    const doc = editor.getValue();
     const from = editor.posToOffset(editor.getCursor("from"));
     const to = editor.posToOffset(editor.getCursor("to"));
 
+    // 无选区 = 单击 → 隐藏（mark 跳转由 post-processor click 处理）
+    if (from === to) {
+      this.toolbar?.hide();
+      return;
+    }
+
+    const doc = editor.getValue();
     const action = getToolbarAction(doc, from, to);
 
     if (!action) {
@@ -182,17 +156,9 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
     // Show floating toolbar
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) {
-      this.toolbar?.hide();
-      return;
-    }
+    if (!sel || sel.rangeCount === 0) { this.toolbar?.hide(); return; }
     const rect = sel.getRangeAt(0).getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      this.toolbar?.hide();
-      return;
-    }
-    // Suppress scroll-hide for 300ms after showing — prevents CM6 reflow race
-    this.suppressScrollUntil = Date.now() + 300;
+    if (rect.width === 0 && rect.height === 0) { this.toolbar?.hide(); return; }
     this.toolbar?.show(action, rect);
   }
 
@@ -303,15 +269,20 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
     const diff = computeSyncDiff(allVaultAncs, globalCanvasAncs);
 
+    // Orphan detection: scan ALL vault md files (not just visible one)
+    // so nodes from md2 don't appear as orphans when only md1 is visible
+    const allVaultAncIds = new Set<string>();
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const content = await this.app.vault.cachedRead(file);
+      for (const fa of scanFileAncs(content)) allVaultAncIds.add(fa.ancId);
+    }
+    const orphanCount = [...currentCanvasAncs.keys()].filter(
+      (id) => !allVaultAncIds.has(id)
+    ).length;
+
     if (diff.toCreate.length === 0) {
       let msg = "已完全同步，无新节点需要创建";
-      // Orphan count: ancs in current canvas not in vault
-      const orphanCount = [...currentCanvasAncs.keys()].filter(
-        (id) => !allVaultAncs.some((a) => a.ancId === id)
-      ).length;
-      if (orphanCount > 0) {
-        msg += `\n发现 ${orphanCount} 个孤儿锚点`;
-      }
+      if (orphanCount > 0) msg += `\n发现 ${orphanCount} 个孤儿锚点`;
       new Notice(msg);
       return;
     }
@@ -325,15 +296,8 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       this.settings.nodeGap,
     );
 
-    // Orphan count only for current canvas
-    const orphanCount = [...currentCanvasAncs.keys()].filter(
-      (id) => !allVaultAncs.some((a) => a.ancId === id)
-    ).length;
-
     let msg = `✓ 已创建 ${created} 个新节点`;
-    if (orphanCount > 0) {
-      msg += `，发现 ${orphanCount} 个孤儿锚点`;
-    }
+    if (orphanCount > 0) msg += `，发现 ${orphanCount} 个孤儿锚点`;
     new Notice(msg, 4000);
   }
 
@@ -398,7 +362,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       new Notice("请先选中一个 Canvas 节点");
       return;
     }
-    const ancId = extractAncFromMeta(selectedNodes[0].getData().text ?? "");
+    const ancId = readMarginMeta(selectedNodes[0].getData());
     if (!ancId) {
       new Notice("该节点没有摘录锚点");
       return;
@@ -448,20 +412,33 @@ export default class CanvasAnnotatorPlugin extends Plugin {
    * Uses a data attribute to avoid double-binding.
    * Called on load and on layout-change (new canvas opened).
    */
+  private boundCanvasLeaves = new WeakSet<object>();
+
   private bindCanvasDblClick() {
     this.app.workspace.getLeavesOfType("canvas").forEach((leaf) => {
+      if (this.boundCanvasLeaves.has(leaf)) return;
+      this.boundCanvasLeaves.add(leaf);
+
       const container = leaf.view.containerEl;
-      if (container.dataset.ancDblBound === "1") return;
-      container.dataset.ancDblBound = "1";
-      container.addEventListener("dblclick", async (e: MouseEvent) => {
-        const canvasView = leaf.view as unknown as CanvasView;
+      const canvasView = leaf.view as unknown as CanvasView;
+      let lastSelectedNode: any = null;
+
+      // capture=true: fires before Canvas's own mousedown handler
+      container.addEventListener("mousedown", () => {
         const selected = [...canvasView.canvas.selection];
-        if (selected.length === 0) return;
-        const ancId = extractAncFromMeta(selected[0].getData().text ?? "");
+        lastSelectedNode = selected.length > 0 ? selected[0] : null;
+      }, true);
+
+      // capture=true + preventDefault: fires before Canvas, blocks node editor on anc nodes
+      container.addEventListener("dblclick", async (e: MouseEvent) => {
+        if (!lastSelectedNode) return;
+        const ancId = readMarginMeta(lastSelectedNode.getData());
+        lastSelectedNode = null;
         if (!ancId) return;
+        e.preventDefault();
         e.stopPropagation();
         await this.jumpMdByAncId(ancId);
-      });
+      }, true);
     });
   }
 
@@ -477,6 +454,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
           .find((l) => (l.view as any)?.file?.path === file.path);
         const leaf = existingLeaf ?? this.app.workspace.getLeaf("split");
         await leaf.openFile(file);
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
         setTimeout(() => {
           const mdView = leaf.view as unknown as MarkdownView;
           if (!mdView?.editor) return;

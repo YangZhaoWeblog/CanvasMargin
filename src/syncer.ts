@@ -1,8 +1,7 @@
 import {
   ANC_ID_RE_GLOBAL,
   ANC_CLASS_RE_GLOBAL,
-  extractAncFromMeta,
-  buildNodeText,
+  readMarginMeta,
   NODE_WIDTH,
   NODE_HEIGHT,
 } from "./models";
@@ -58,8 +57,8 @@ export function scanCanvasJsonAncs(json: string): Set<string> {
     const data = JSON.parse(json);
     const nodes: any[] = data.nodes ?? [];
     for (const node of nodes) {
-      if (node.type !== "text" || !node.text) continue;
-      const anc = extractAncFromMeta(node.text as string);
+      if (node.type !== "text") continue;
+      const anc = typeof node.canvasMargin?.anc === "string" ? node.canvasMargin.anc : null;
       if (anc) result.add(anc);
     }
   } catch {
@@ -68,14 +67,14 @@ export function scanCanvasJsonAncs(json: string): Set<string> {
   return result;
 }
 
-/** Scan Canvas node data for all anc IDs in <!--card:{...}--> metadata. */
+/** Scan Canvas node data for all anc IDs from canvasMargin metadata. */
 export function scanCanvasAncs(
-  nodes: Pick<CanvasNodeData, "id" | "type" | "text" | "y" | "height">[]
+  nodes: CanvasNodeData[]
 ): Map<string, CanvasAncInfo> {
   const result = new Map<string, CanvasAncInfo>();
   for (const node of nodes) {
-    if (node.type !== "text" || !node.text) continue;
-    const anc = extractAncFromMeta(node.text);
+    if (node.type !== "text") continue;
+    const anc = readMarginMeta(node);
     if (anc) {
       result.set(anc, { nodeId: node.id, y: node.y, height: node.height });
     }
@@ -117,13 +116,13 @@ export function createNodes(
 ): number {
   let y = startY;
   for (const anc of toCreate) {
-    const text = buildNodeText(anc.text, anc.ancId);
-    canvas.createTextNode({
+    const node = canvas.createTextNode({
       pos: { x: 0, y },
       size: { width: NODE_WIDTH, height: NODE_HEIGHT },
-      text,
+      text: anc.text,
       color,
     });
+    node.setData({ ...node.getData(), canvasMargin: { anc: anc.ancId } });
     y += NODE_HEIGHT + gap;
   }
   canvas.requestSave();

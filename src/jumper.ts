@@ -1,4 +1,4 @@
-import { extractAncFromMeta } from "./models";
+import { readMarginMeta } from "./models";
 
 export interface CanvasSearchResult {
   nodeId: string;
@@ -14,8 +14,8 @@ export function findAncInCanvasJson(json: string, ancId: string): CanvasSearchRe
     const data = JSON.parse(json);
     const nodes: any[] = data.nodes ?? [];
     for (const node of nodes) {
-      if (node.type !== "text" || !node.text) continue;
-      const anc = extractAncFromMeta(node.text);
+      if (node.type !== "text") continue;
+      const anc = readMarginMeta(node);
       if (anc === ancId) {
         return { nodeId: node.id };
       }

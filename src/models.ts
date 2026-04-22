@@ -19,9 +19,6 @@ export const ANC_CLASS_RE = /<mark\s+class="[^"]*anc-([A-Za-z0-9_-]{21})[^"]*">(
 /** Global version for old class-encoded format. */
 export const ANC_CLASS_RE_GLOBAL = /<mark\s+class="[^"]*anc-([A-Za-z0-9_-]{21})[^"]*">([\s\S]*?)<\/mark>/g;
 
-/** Matches <!--card:{JSON}--> metadata. Group 1 = the JSON string. */
-export const CARD_META_RE = /<!--card:(.*?)-->/;
-
 /** Default gap between auto-placed nodes (px). */
 export const NODE_GAP = 20;
 
@@ -43,26 +40,29 @@ export function extractAncFromClass(classStr: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Extract anc field from <!--card:{...}--> metadata in text. Returns null if not found. */
-export function extractAncFromMeta(text: string): string | null {
-  const m = CARD_META_RE.exec(text);
-  if (!m) return null;
-  try {
-    const obj = JSON.parse(m[1]);
-    return typeof obj.anc === "string" ? obj.anc : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Build a <mark> tag string: `<mark class="cN" id="anc-{id}">text</mark>` */
 export function buildMarkTag(text: string, color: string, ancId: string): string {
   return `<mark class="c${color}" id="anc-${ancId}">${text}</mark>`;
 }
 
-/** Build Canvas node text with anchor metadata appended. */
-export function buildNodeText(text: string, ancId: string): string {
-  return `${text}\n<!--card:${JSON.stringify({ anc: ancId })}-->`;
+export interface CanvasMarginMeta {
+  anc: string;
+}
+
+export interface RawNode {
+  text?: string;
+  canvasMargin?: CanvasMarginMeta;
+  [key: string]: unknown;
+}
+
+export function readMarginMeta(node: { canvasMargin?: { anc?: unknown } }): string | null {
+  const meta = node.canvasMargin;
+  if (!meta || typeof meta.anc !== "string") return null;
+  return meta.anc;
+}
+
+export function writeMarginMeta(node: RawNode, ancId: string): RawNode {
+  return { ...node, canvasMargin: { anc: ancId } };
 }
 
 export interface PluginSettings {

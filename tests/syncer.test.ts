@@ -51,9 +51,9 @@ describe("scanFileAncs", () => {
 describe("scanCanvasAncs", () => {
   it("extracts anc IDs from Canvas node data", () => {
     const nodes = [
-      { id: "n1", type: "text", text: 'hello\n<!--card:{"anc":"abc12345678901234567"}-->', x: 0, y: 0, width: 300, height: 100 },
-      { id: "n2", type: "text", text: 'no anchor here', x: 0, y: 100, width: 300, height: 100 },
-      { id: "n3", type: "text", text: '<!--card:{"anc":"def12345678901234567","id":99}-->', x: 0, y: 200, width: 300, height: 100 },
+      { id: "n1", type: "text", text: "hello", canvasMargin: { anc: "abc12345678901234567" }, x: 0, y: 0, width: 300, height: 100 },
+      { id: "n2", type: "text", text: "no anchor here", x: 0, y: 100, width: 300, height: 100 },
+      { id: "n3", type: "text", text: "", canvasMargin: { anc: "def12345678901234567" }, x: 0, y: 200, width: 300, height: 100 },
     ];
     const result = scanCanvasAncs(nodes);
     expect(result).toEqual(
@@ -138,9 +138,9 @@ describe("scanCanvasJsonAncs", () => {
   it("extracts anc IDs from valid canvas JSON", () => {
     const json = JSON.stringify({
       nodes: [
-        { id: "n1", type: "text", text: 'hello\n<!--card:{"anc":"abc12345678901234567"}-->', x: 0, y: 0, width: 300, height: 100 },
+        { id: "n1", type: "text", text: "hello", canvasMargin: { anc: "abc12345678901234567" }, x: 0, y: 0, width: 300, height: 100 },
         { id: "n2", type: "text", text: "no anchor here", x: 0, y: 100, width: 300, height: 100 },
-        { id: "n3", type: "text", text: '<!--card:{"anc":"def12345678901234567","id":99}-->', x: 0, y: 200, width: 300, height: 100 },
+        { id: "n3", type: "text", text: "", canvasMargin: { anc: "def12345678901234567" }, x: 0, y: 200, width: 300, height: 100 },
       ],
       edges: [],
     });

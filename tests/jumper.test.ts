@@ -5,7 +5,7 @@ describe("findAncInCanvasJson", () => {
   it("finds the node ID containing the given anc", () => {
     const json = JSON.stringify({
       nodes: [
-        { id: "n1", type: "text", text: 'hello\n<!--card:{"anc":"abc12345678901234567"}-->', x: 0, y: 0, width: 300, height: 100 },
+        { id: "n1", type: "text", text: "hello", canvasMargin: { anc: "abc12345678901234567" }, x: 0, y: 0, width: 300, height: 100 },
         { id: "n2", type: "text", text: "no anchor", x: 0, y: 100, width: 300, height: 100 },
       ],
       edges: [],

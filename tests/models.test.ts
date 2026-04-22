@@ -2,13 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   ANC_RE,
   ANC_CLASS_RE,
-  CARD_META_RE,
-  NODE_GAP,
-  NODE_WIDTH,
   extractAncFromClass,
-  extractAncFromMeta,
   buildMarkTag,
-  buildNodeText,
+  readMarginMeta,
+  writeMarginMeta,
   DEFAULT_SETTINGS,
 } from "../src/models";
 
@@ -52,19 +49,29 @@ describe("extractAncFromClass", () => {
   });
 });
 
-describe("extractAncFromMeta", () => {
-  it("extracts anc from card metadata", () => {
-    const text = 'hello\n<!--card:{"anc":"abc123def456789012345"}-->';
-    expect(extractAncFromMeta(text)).toBe("abc123def456789012345");
+describe("readMarginMeta", () => {
+  it("returns ancId when canvasMargin field exists", () => {
+    expect(readMarginMeta({ canvasMargin: { anc: "abc123" } })).toBe("abc123");
   });
-
-  it("returns null when no anc field", () => {
-    const text = 'hello\n<!--card:{"id":123}-->';
-    expect(extractAncFromMeta(text)).toBeNull();
+  it("returns null when no canvasMargin field", () => {
+    expect(readMarginMeta({})).toBeNull();
   });
+  it("returns null when anc is wrong type", () => {
+    expect(readMarginMeta({ canvasMargin: { anc: 123 } })).toBeNull();
+  });
+  it("returns null when canvasMargin is empty object", () => {
+    expect(readMarginMeta({ canvasMargin: {} })).toBeNull();
+  });
+});
 
-  it("returns null when no metadata", () => {
-    expect(extractAncFromMeta("plain text")).toBeNull();
+describe("writeMarginMeta", () => {
+  it("adds canvasMargin to empty node", () => {
+    const result = writeMarginMeta({}, "abc123");
+    expect(result).toEqual({ canvasMargin: { anc: "abc123" } });
+  });
+  it("preserves existing fields", () => {
+    const result = writeMarginMeta({ text: "hello", color: "5" }, "abc123");
+    expect(result).toEqual({ text: "hello", color: "5", canvasMargin: { anc: "abc123" } });
   });
 });
 
@@ -72,13 +79,6 @@ describe("buildMarkTag", () => {
   it("wraps text with mark tag using id= attribute (new format)", () => {
     const result = buildMarkTag("hello world", "5", "V1StGXR8_Z5jdHi6B-myT");
     expect(result).toBe('<mark class="c5" id="anc-V1StGXR8_Z5jdHi6B-myT">hello world</mark>');
-  });
-});
-
-describe("buildNodeText", () => {
-  it("creates node text with anchor metadata", () => {
-    const result = buildNodeText("hello world", "V1StGXR8_Z5jdHi6B-myT");
-    expect(result).toBe('hello world\n<!--card:{"anc":"V1StGXR8_Z5jdHi6B-myT"}-->');
   });
 });
 

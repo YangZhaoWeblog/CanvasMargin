@@ -24,6 +24,7 @@ export interface CanvasNodeData {
   width: number;
   height: number;
   color?: string;
+  canvasMargin?: { anc: string };
 }
 
 export interface CanvasNode {
@@ -33,6 +34,7 @@ export interface CanvasNode {
   width: number;
   height: number;
   getData(): CanvasNodeData;
+  setData(data: CanvasNodeData): void;
   getBBox(): BBox;
 }
 

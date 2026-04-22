@@ -1,20 +1,21 @@
 /**
  * Pure function: determine what action the toolbar should offer
- * given the current cursor/selection position in the document.
+ * given the current selection position in the document.
+ *
+ * Precondition: from !== to (caller guarantees a selection exists).
  *
  * Returns:
- *  "annotate" — selection exists and is not inside an existing mark
- *  "remove"   — cursor/selection is inside an existing mark
- *  null       — no selection and not in a mark (hide toolbar)
+ *  "annotate" — selection is not inside an existing mark
+ *  "remove"   — selection overlaps an existing mark
+ *  null       — no selection (defensive, should not happen)
  */
 export function getToolbarAction(
   doc: string,
   from: number,
   to: number,
 ): "annotate" | "remove" | null {
-  const hasSelection = from !== to;
+  if (from === to) return null; // defensive: no selection → no action
 
-  // Check if position is inside an existing <mark>
   const openRe = /<mark\s[^>]*>/g;
   const closeStr = "</mark>";
 
@@ -26,16 +27,11 @@ export function getToolbarAction(
     if (closeStart === -1) continue;
     const closeEnd = closeStart + closeStr.length;
 
-    // Case 1: cursor/selection entirely within inner text
-    if (from >= openEnd && to <= closeStart) return "remove";
-
-    // Case 2: selection overlaps any part of the full mark tag (openStart..closeEnd)
-    // Use >= openStart so cursor AT the opening < also triggers "remove"
-    if (from < closeEnd && to >= openStart) return "remove";
+    // Selection overlaps any part of the mark tag → remove
+    if (from < closeEnd && to > openStart) return "remove";
   }
 
-  if (hasSelection) return "annotate";
-  return null;
+  return "annotate";
 }
 
 /**
