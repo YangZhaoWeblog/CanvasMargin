@@ -1,5 +1,7 @@
 # CanvasMargin
 
+> Harnessed by [td-harness-init](https://github.com/) v0.1. AI agents: read [AGENTS.md](AGENTS.md) before any code change.
+
 **Highlight text in notes, sync excerpts to Obsidian Canvas as linked nodes.**
 
 > 中文文档：[README-zh.md](README-zh.md)
@@ -101,6 +103,14 @@ Click anywhere inside a highlight — the toolbar shows **✂ Remove**. Click it
 
 - Obsidian 1.1+
 - Notes with the old highlight format (`class="cN anc-xxx"`) are fully supported — no migration needed.
+
+---
+
+## For AI agents / contributors
+
+- [AGENTS.md](AGENTS.md) — agent rules and project map
+- [harness/](harness/) — detailed regulations
+- [PROGRESS.md](PROGRESS.md) / [DECISIONS.md](DECISIONS.md) — current state + rationale
 
 ---
 

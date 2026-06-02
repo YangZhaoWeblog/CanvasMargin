@@ -2,3 +2,13 @@ node_modules/
 main.js
 dist/
 .worktrees/
+
+# td-harness
+.pge/code/         # PGE intermediate code (use feature branch instead)
+.harness/tmp/      # Transient harness state
+CLAUDE.md.bak      # one-shot backup from harness init
+
+# td-harness
+.pge/code/         # PGE intermediate code (use feature branch instead)
+.harness/tmp/      # Transient harness state
+CLAUDE.md.bak      # one-shot backup from harness init
