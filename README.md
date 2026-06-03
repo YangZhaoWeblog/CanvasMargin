@@ -17,7 +17,7 @@ Reading note                    Canvas
 ──────────────────              ──────────────────────────
 ...some text...                 ┌─────────────────────┐
 <mark>this insight</mark>  ──►  │ this insight        │
-...more text...                 │ <!--card:{anc:...}-->│
+...more text...                 │ canvasMargin:{anc:…} │
                                 └─────────────────────┘
          ◄── double-click node to jump back
 ```
@@ -30,7 +30,7 @@ Reading note                    Canvas
 |---------|---------------|
 | Highlight selection | Select text → floating toolbar → **✎ Excerpt** |
 | Remove highlight | Click inside a highlight → floating toolbar → **✂ Remove** |
-| Sync to Canvas | Ribbon icon, or the sync button in the editor top bar |
+| Sync to Canvas | Ribbon icon or command palette |
 | Jump: note → Canvas | Click any highlight in Reading/Live Preview mode |
 | Jump: Canvas → note | Double-click a Canvas node |
 | Auto-excerpt mode | Settings → **Immersive mode**: mouseup with selection = instant highlight |
@@ -64,7 +64,7 @@ Or enable **Immersive mode** in settings: any mouseup-selection is highlighted i
 
 ### Sync to Canvas
 
-Open a Canvas file, then click the **↻** ribbon icon (or the sync button at the top of any note). New highlights become text nodes arranged vertically on the Canvas.
+Open a Canvas file, then click the **↻** ribbon icon (or use the command palette: `Canvas Annotator: Sync annotations`). New highlights become text nodes arranged vertically on the Canvas.
 
 **Auto sync**: when enabled, the node is created on the open Canvas immediately after each highlight — no manual sync needed.
 
@@ -93,7 +93,7 @@ Click anywhere inside a highlight — the toolbar shows **✂ Remove**. Click it
 ## How it works (for the curious)
 
 - Highlights are stored as `<mark class="cN" id="anc-{nanoid}">text</mark>` directly in your Markdown source — no separate database, no YAML pollution.
-- Canvas nodes carry a `<!--card:{"anc":"..."}-->` comment that links back to the source highlight.
+- Canvas nodes carry a `canvasMargin` top-level JSON field (e.g. `"canvasMargin": { "anc": "..." }`) that links back to the source highlight. The anchor is stored as a top-level field on the canvas node, not inside the node text.
 - Sync scans **all** `.canvas` files in your vault to avoid duplicates across canvases.
 - The floating toolbar uses a `mousedown` event to capture the mark element's position *before* CodeMirror collapses its decoration — this is why the toolbar appears reliably even in Live Preview.
 

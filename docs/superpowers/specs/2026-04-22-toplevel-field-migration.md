@@ -1,6 +1,6 @@
 # Canvas Annotator（CanvasMargin）：元数据迁移至顶层字段
 
-> 状态：Draft  
+> 状态：Done  
 > 日期：2026-04-22  
 > 关联插件：canvas2anki、canvas-annotator（canvasMargin）
 

@@ -1,5 +1,7 @@
 # Canvas Annotator Implementation Plan
 
+> **Status:** Done
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build an Obsidian plugin that lets users highlight text in md notes, sync those highlights as nodes to an open Canvas, and jump bidirectionally between md highlights and Canvas nodes.

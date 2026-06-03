@@ -4,7 +4,7 @@
 
 学习工作流：原文 md（learn-deep 产出）→ Canvas 空间组织 → Anki 导出。缺的一环是 md ↔ Canvas 的双向关联，类似 MarginNote 的高亮→脑图联动。
 
-本插件独立于 canvas2anki，通过共享 `<!--card:{JSON}-->` metadata 协议协作。
+本插件独立于 canvas2anki，各自使用独立的顶层 JSON 字段命名空间（`canvasMargin` vs `canvas2anki`）。
 
 ## 范围
 
@@ -89,24 +89,26 @@ JS 侧提取锚点：`el.className.match(/anc-([A-Za-z0-9_-]{21})/)?.[1]`
 {
   "id": "auto-generated",
   "type": "text",
-  "text": "摘录的文本\n<!--card:{\"anc\":\"V1StGXR8_Z5jdHi6B-myT\"}-->",
+  "text": "摘录的文本",
   "color": "5",
   "x": 0, "y": 200,
-  "width": 300, "height": 100
+  "width": 300, "height": 100,
+  "canvasMargin": {
+    "anc": "V1StGXR8_Z5jdHi6B-myT"
+  }
 }
 ```
 
-### Metadata 协议（与 canvas2anki 共享）
+### Metadata 协议（各插件独立命名空间）
 
-`<!--card:{JSON}-->` 格式，字段可叠加：
+不再使用 `<!--card:{JSON}-->` 共享协议。各插件使用独立的顶层 JSON 字段：
 
-| 场景 | metadata |
-|------|----------|
-| 纯摘录节点 | `{"anc":"nanoid"}` |
-| 摘录后导出 Anki | `{"anc":"nanoid","id":12345}` |
-| 纯 Anki 卡片（无摘录） | `{"id":12345}` |
+| 插件 | 顶层字段 | 示例 |
+|------|----------|------|
+| canvas-annotator | `canvasMargin` | `"canvasMargin": { "anc": "nanoid" }` |
+| canvas2anki | `canvas2anki` | `"canvas2anki": { "id": 12345 }` |
 
-**关键约束：canvas2anki 的 writeback 必须合并写入，不能覆写已有字段。** 当前实现会丢失 `anc`，需要修复。
+各插件只读写自己的命名空间，互不干扰，无需合并写入。
 
 ### 多文件关系
 
@@ -203,7 +205,7 @@ V1：快捷键 / 命令面板。一个快捷键双向（根据当前上下文自
 
 ### Canvas → md
 
-1. 读取选中节点的 `<!--card:{"anc":"xxx"}-->` 中的 `anc`
+1. 读取选中节点的 `canvasMargin.anc` 字段
 2. 搜索 vault 中所有 md，找到含 `anc-xxx` 的文件和位置
 3. 打开该 md → 滚动到对应位置
 
@@ -227,7 +229,7 @@ V1：快捷键 / 命令面板。一个快捷键双向（根据当前上下文自
 |------|-----|------|
 | nanoid 长度 | 21 | 默认字母表 21 位，碰撞概率可忽略 |
 | 节点宽度 | 300 | 合理默认，用户可在 Canvas 里手动调 |
-| metadata 格式 | `<!--card:{JSON}-->` | 与 canvas2anki 共享协议 |
+| metadata 格式 | `canvasMargin: { anc: "..." }` 顶层字段 | 各插件独立命名空间 |
 
 ---
 
@@ -254,8 +256,8 @@ canvas-annotator/
 
 | 关注点 | 处理 |
 |--------|------|
-| metadata 格式 | 共享 `<!--card:{JSON}-->`，字段可叠加 |
-| writeback 兼容 | canvas2anki 必须合并写入，保留 `anc` 字段 |
+| metadata 格式 | 各自使用独立顶层字段：`canvasMargin` / `canvas2anki` |
+| writeback 兼容 | 各插件只读写自己的命名空间，互不干扰 |
 | 颜色语义 | 完全独立。摘录默认蓝，导出色由 canvas2anki 管 |
 | 安装依赖 | 互不依赖，可单独使用 |
 
