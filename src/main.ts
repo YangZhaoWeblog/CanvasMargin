@@ -79,6 +79,9 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on("layout-change", () => this.bindCanvasDblClick())
     );
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => this.bindCanvasDblClick())
+    );
     this.bindCanvasDblClick();
 
     // ── Post-processor: click-to-jump ──
@@ -455,13 +458,47 @@ export default class CanvasAnnotatorPlugin extends Plugin {
         const leaf = existingLeaf ?? this.app.workspace.getLeaf("split");
         await leaf.openFile(file);
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
+
         setTimeout(() => {
           const mdView = leaf.view as unknown as MarkdownView;
-          if (!mdView?.editor) return;
-          const pos = mdView.editor.offsetToPos(result.offset);
-          mdView.editor.setCursor(pos);
-          mdView.editor.scrollIntoView({ from: pos, to: pos }, true);
-        }, 200);
+          if (!mdView) return;
+
+          // Try editor-based jump first (source / live mode)
+          if (mdView.editor) {
+            const pos = mdView.editor.offsetToPos(result.offset);
+            mdView.editor.setCursor(pos);
+            mdView.editor.scrollIntoView({ from: pos, to: pos }, true);
+            return;
+          }
+
+          // Reading mode: find the anchor element in the rendered DOM and scroll to it
+          const container = leaf.view.containerEl;
+          console.log("[canvas-annotator] reading mode jump, ancId:", ancId);
+          console.log("[canvas-annotator] container marks:", container.querySelectorAll("mark").length);
+          // Debug: dump first 3 mark elements' attributes
+          container.querySelectorAll("mark").forEach((m, i) => {
+            if (i < 3) console.log(`[canvas-annotator] mark[${i}] id="${m.id}" class="${m.className}"`);
+          });
+
+          // Try multiple selector strategies
+          let ancEl: Element | null = null;
+          try { ancEl = container.querySelector(`[id="anc-${ancId}"]`); } catch { /* */ }
+          if (!ancEl) {
+            try { ancEl = container.querySelector(`[class*="anc-${ancId}"]`); } catch { /* */ }
+          }
+          if (!ancEl) {
+            // Brute force: iterate all marks
+            ancEl = Array.from(container.querySelectorAll("mark")).find(
+              (m) => m.id === `anc-${ancId}` || m.classList.contains(`anc-${ancId}`)
+            ) ?? null;
+          }
+          console.log("[canvas-annotator] ancEl found:", !!ancEl);
+          if (ancEl) {
+            ancEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          } else {
+            new Notice("阅读模式下未找到锚点元素");
+          }
+        }, 300);
         return;
       }
     }
