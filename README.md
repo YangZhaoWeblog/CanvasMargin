@@ -1,118 +1,101 @@
 # CanvasMargin
 
-> Harnessed by [td-harness-init](https://github.com/) v0.1. AI agents: read [AGENTS.md](AGENTS.md) before any code change.
-
 **Highlight text in notes, sync excerpts to Obsidian Canvas as linked nodes.**
 
-> 中文文档：[README-zh.md](README-zh.md)
+> AI agents and contributors: read [AGENTS.md](AGENTS.md) before changing code. 中文文档：[README-zh.md](README-zh.md)
 
 ---
 
-## What it does
+## What It Does
 
-CanvasMargin bridges your reading notes and Obsidian Canvas. Highlight a passage → it becomes a linked node on your Canvas. Double-click a node → jump back to the exact line in your note.
+CanvasMargin connects reading notes with Obsidian Canvas. Highlight a passage, sync it to a Canvas text node, then jump between the note mark and the Canvas node.
 
-```
+```text
 Reading note                    Canvas
 ──────────────────              ──────────────────────────
 ...some text...                 ┌─────────────────────┐
 <mark>this insight</mark>  ──►  │ this insight        │
-...more text...                 │ canvasMargin:{anc:…} │
+...more text...                 │ canvasMargin:{anc:…}│
                                 └─────────────────────┘
          ◄── double-click node to jump back
 ```
 
----
-
 ## Features
 
 | Feature | How to trigger |
-|---------|---------------|
+|---|---|
 | Highlight selection | Select text → floating toolbar → **✎ Excerpt** |
 | Remove highlight | Click inside a highlight → floating toolbar → **✂ Remove** |
 | Sync to Canvas | Ribbon icon or command palette |
 | Jump: note → Canvas | Click any highlight in Reading/Live Preview mode |
-| Jump: Canvas → note | Double-click a Canvas node |
-| Auto-excerpt mode | Settings → **Immersive mode**: mouseup with selection = instant highlight |
-| Auto-sync | Settings → **Auto sync**: sync to open Canvas right after highlighting |
-
----
+| Jump: Canvas → note | Double-click a CanvasMargin node |
+| Auto-excerpt mode | Settings → **Immersive mode** |
+| Auto-sync | Settings → **Auto sync** |
 
 ## Installation
 
-### Manual (current)
+### Manual
 
-1. Download `main.js`, `manifest.json`, `styles.css` from the latest release.
-2. Copy to `.obsidian/plugins/canvas-margin/`.
-3. Enable in **Settings → Community Plugins**.
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release.
+2. Copy them to `.obsidian/plugins/canvas-annotator/`.
+3. Enable the plugin in **Settings → Community Plugins**.
 
-### BRAT (beta)
+### BRAT
 
-Add `your-github-username/canvas-annotator` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
-
----
+Add `YangZhaoWeblog/CanvasMargin` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 
 ## Usage
 
-### Highlight text
+### Highlight Text
 
 1. Open a Markdown note in Live Preview or Editing mode.
-2. Select any text.
-3. A floating toolbar appears — click **✎ Excerpt**.
+2. Select text.
+3. Click **✎ Excerpt** in the floating toolbar.
 
-Or enable **Immersive mode** in settings: any mouseup-selection is highlighted immediately without the toolbar.
+Or enable **Immersive mode**: mouseup with a selection creates the mark immediately.
 
 ### Sync to Canvas
 
-Open a Canvas file, then click the **↻** ribbon icon (or use the command palette: `Canvas Annotator: Sync annotations`). New highlights become text nodes arranged vertically on the Canvas.
+Open a Canvas file, then click the **↻** ribbon icon or run `Canvas Annotator: Sync annotations` from the command palette.
 
-**Auto sync**: when enabled, the node is created on the open Canvas immediately after each highlight — no manual sync needed.
+When **Auto sync** is enabled and exactly one visible note plus one visible Canvas are open, a new Canvas node is created immediately after highlighting.
 
-### Jump between note and Canvas
+### Jump Between Note and Canvas
 
-- **Note → Canvas**: click a highlighted passage (Reading mode or rendered Live Preview line).
+- **Note → Canvas**: click a highlighted passage in Reading mode or rendered Live Preview.
 - **Canvas → Note**: double-click a CanvasMargin node.
 
-### Remove a highlight
+### Remove a Highlight
 
-Click anywhere inside a highlight — the toolbar shows **✂ Remove**. Click it to strip the `<mark>` tag and restore plain text.
-
----
+Click inside a highlight, then click **✂ Remove** in the floating toolbar. The `<mark>` tag is removed and the original text remains.
 
 ## Settings
 
 | Setting | Default | Description |
-|---------|---------|-------------|
-| Highlight color | Cyan (5) | Color swatch for new highlights and Canvas nodes |
-| Node gap | 20 px | Vertical spacing between auto-placed Canvas nodes |
-| Immersive mode | Off | Mouseup with selection → highlight immediately |
-| Auto sync | Off | Sync to open Canvas right after each highlight |
+|---|---|---|
+| Highlight color | Cyan (5) | Color for new marks and Canvas nodes |
+| Node gap | 20 px | Vertical gap between auto-placed Canvas nodes |
+| Immersive mode | Off | Mouseup selection creates a mark immediately |
+| Auto sync | Off | Create a Canvas node right after highlighting when a valid split pair exists |
 
----
+## How It Works
 
-## How it works (for the curious)
-
-- Highlights are stored as `<mark class="cN" id="anc-{nanoid}">text</mark>` directly in your Markdown source — no separate database, no YAML pollution.
-- Canvas nodes carry a `canvasMargin` top-level JSON field (e.g. `"canvasMargin": { "anc": "..." }`) that links back to the source highlight. The anchor is stored as a top-level field on the canvas node, not inside the node text.
-- Sync scans **all** `.canvas` files in your vault to avoid duplicates across canvases.
-- The floating toolbar uses a `mousedown` event to capture the mark element's position *before* CodeMirror collapses its decoration — this is why the toolbar appears reliably even in Live Preview.
-
----
+- Highlights are stored directly in Markdown as `<mark class="cN" id="anc-{nanoid}">text</mark>`.
+- Old marks using `class="cN anc-xxx"` are still read for compatibility.
+- Canvas nodes store link metadata in a top-level JSON field: `"canvasMargin": { "anc": "..." }`.
+- Sync scans all `.canvas` files in the vault to avoid creating duplicate nodes for the same anchor.
 
 ## Compatibility
 
-- Obsidian 1.1+
-- Notes with the old highlight format (`class="cN anc-xxx"`) are fully supported — no migration needed.
+- Obsidian 1.5.0+
+- Desktop only
 
----
+## For Contributors
 
-## For AI agents / contributors
-
-- [AGENTS.md](AGENTS.md) — agent rules and project map
-- [harness/](harness/) — detailed regulations
-- [PROGRESS.md](PROGRESS.md) / [DECISIONS.md](DECISIONS.md) — current state + rationale
-
----
+- [AGENTS.md](AGENTS.md) — agent entrypoint and project map
+- [harness/](harness/) — operational rules
+- [docs/design-spec.md](docs/design-spec.md) — current design summary
+- [PROGRESS.md](PROGRESS.md) / [DECISIONS.md](DECISIONS.md) — current state and rationale
 
 ## License
 

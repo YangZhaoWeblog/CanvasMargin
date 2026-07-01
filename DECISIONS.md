@@ -29,6 +29,37 @@
 
 ## 记录
 
+### 2026-07-01：删除旧实现文档，只保留反模式和决策原因
+
+- **背景**：漂移扫描发现旧 plans/specs 中保留了大量可照抄的旧实现片段，容易误导后续 AI 需求，例如旧 Canvas metadata 写法、旧 helper、旧 top panel 方案。
+- **候选方案**：(A) 归档旧文档并加警示 / (B) 全量重写历史文档 / (C) 删除旧实现本体，把有效原因压缩到当前 docs、harness 和本文件
+- **选择**：C
+- **理由**：错误实现细节没有必要继续出现在 current docs；Git history 已足够追溯。未来 AI 需要看到的是当前 contract 和简短 anti-pattern，而不是可复制的旧代码步骤。
+- **保留内容**：`canvasMargin` 顶层字段、`id="anc-..."`、旧 mark read compatibility、不要把 metadata 放入 node text、不要恢复旧 top sync panel。
+- **代价**：失去在工作区直接阅读早期执行计划的便利。
+- **回滚条件**：用户需要做历史复盘；届时从 git history 查看旧 docs，而不是恢复为 current docs。
+- **关联**：`docs/design-spec.md`、`harness/api-standards.md`、`harness/code-review.md`
+
+### 2026-07-01：Harness 写作风格采用中文主干 + precise English terms
+
+- **背景**：用户反馈刚生成的 harness 文件应优先用中文表达，因为主要读者是中文用户；同时保留英文单词/短句能更好激活 LLM 的技术语义通路。
+- **候选方案**：(A) 全英文 / (B) 全中文 / (C) 中文主干 + 文件名、API、命令、protocol、精确技术词保留英文
+- **选择**：C
+- **理由**：C 同时兼顾人工可读性和 LLM 对技术 token 的稳定理解，也匹配本项目已有中英文混写习惯。
+- **代价**：风格上需要主动控制，不要变成随机夹杂英文。
+- **回滚条件**：团队后续要求统一英文或统一中文。
+- **关联**：`AGENTS.md`、`harness/instruction-governance.md`
+
+### 2026-07-01：覆盖式重建 harness，以真实代码和配置为事实源
+
+- **背景**：用户要求 `$harness-init` 重新初始化并覆盖现有 harness，同时明确提醒现有文档可能与实际代码不符。
+- **候选方案**：(A) 复用旧 harness 小修 / (B) 读取旧 harness 后合并 / (C) 从 `src/`、`tests/`、`package.json`、`manifest.json`、脚本和 README 重新生成
+- **选择**：C，删除旧的非 baseline `harness/obsidian-api.md`，改由新的 `harness/api-standards.md` 和 `harness/dependency-map.md` 承担 Obsidian/Canvas 规则。
+- **理由**：旧文档已出现漂移信号，例如中文 README 仍描述 `<!--card:...-->`，而当前源码和英文 README 使用 `canvasMargin` 顶层字段。覆盖式重建能避免旧规则继续被入口索引引用。
+- **代价**：旧 harness 中较细的历史叙述被压缩；需要后续按实际工作再沉淀 project-grown 规则。
+- **回滚条件**：发现新 harness 漏掉仍被 hook 或团队流程依赖的硬约束。
+- **关联**：`AGENTS.md`、`harness/*.md`、`src/models.ts`、`src/syncer.ts`
+
 ### 2026-06-02：真相源优先级——代码 > 测试 > harness/* > 旧文档
 
 - **背景**：td-harness 初始化时基于落后 main 3 个 commit 的 worktree 写 harness/*；AI 读了同样过时的 `docs/design-spec.md` 与旧 CLAUDE.md，把已经废弃的 `<!--card:-->` 协议写成 harness 红线（详见 failures.md 同日第 1 条）
@@ -57,10 +88,10 @@
 - **理由**：顶层字段是 Canvas 自定义元数据的"主流"做法，序列化进 .canvas JSON 自然，用户编辑文本不会误碰，与其他插件解耦
 - **命名**：`canvasMargin`（小驼峰，匹配产品品牌 CanvasMargin）；值为对象 `{ anc: string }`，未来可扩展
 - **代价**：
-  - **不**做向后兼容——旧 `<!--card:-->` 数据需一次性迁移脚本（spec 里明确）
+  - **不**做向后兼容——旧数据迁移属于一次性历史处理；当前实现只维护 `canvasMargin` contract
   - 与 canvas2anki 不再共享 key，两插件需各自迁移自己的数据
 - **回滚条件**：Obsidian Canvas 改变了顶层自定义字段的支持方式（例如要求统一进 `styleAttributes`）
-- **关联**：spec `docs/superpowers/specs/2026-04-22-toplevel-field-migration.md`；commit `4d50de5`；harness/obsidian-api.md §3
+- **关联**：原 spec 已删除；当前规则见 `harness/api-standards.md`；commit `4d50de5`
 
 ### 2026-06-02：用 `id="anc-..."` 而不是 `data-anc="..."`
 
@@ -70,7 +101,7 @@
 - **理由**：Obsidian 内部用 DOMPurify 清洗 HTML，会剥离 `data-*` 属性。`class` 与 `id` 是少数能存活的属性载体；`id` 比 class 语义更清楚（"主键"），且 nanoid 21 字符碰撞概率可忽略。
 - **代价**：失去 HTML 标准 `id` 唯一性约束（DOM 里同 id 多次出现），但 Obsidian 渲染单文件时不构成实际问题。
 - **回滚条件**：Obsidian 改 DOMPurify 配置允许 `data-*`，且 `id` 唯一性变成实际渲染问题。
-- **关联**：harness/failures.md「DOMPurify 剥 `data-*` 属性」；harness/obsidian-api.md §1 mark-tag
+- **关联**：harness/failures.md「DOMPurify 剥 `data-*` 属性」；当前规则见 `harness/api-standards.md`
 
 ### 2026-06-02：不在 worktree 内自动安装 git hook
 

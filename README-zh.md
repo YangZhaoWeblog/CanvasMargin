@@ -1,108 +1,101 @@
 # CanvasMargin
 
-**在笔记中高亮文字，将摘录同步为 Obsidian Canvas 节点，双向跳转。**
+**在笔记中高亮文字，将摘录同步为 Obsidian Canvas 节点，并支持双向跳转。**
 
-> English documentation: [README.md](README.md)
+> AI agents 和 contributors：改代码前先读 [AGENTS.md](AGENTS.md)。English documentation: [README.md](README.md)
 
 ---
 
 ## 它做什么
 
-CanvasMargin 把你的阅读笔记和 Obsidian Canvas 连通。高亮一段文字 → 变成 Canvas 上的一个关联节点。双击节点 → 跳回笔记中对应的那一行。
+CanvasMargin 把阅读笔记和 Obsidian Canvas 连起来。你高亮一段文字，把它同步成 Canvas text node，然后可以在 note mark 和 Canvas node 之间双向跳转。
 
-```
+```text
 阅读笔记                         Canvas
 ──────────────────               ──────────────────────────
 ...正文...                       ┌─────────────────────┐
 <mark>这个洞见</mark>  ──同步──►  │ 这个洞见            │
-...更多正文...                   │ <!--card:{anc:...}-->│
+...更多正文...                   │ canvasMargin:{anc:…}│
                                  └─────────────────────┘
               ◄── 双击节点跳回笔记
 ```
 
----
-
-## 功能一览
+## 功能
 
 | 功能 | 触发方式 |
-|------|---------|
+|---|---|
 | 高亮选区 | 选中文字 → 浮动工具栏 → **✎ 摘录** |
 | 取消高亮 | 点击高亮内 → 浮动工具栏 → **✂ 取消** |
-| 同步到 Canvas | Ribbon 图标，或编辑器顶部同步按钮 |
-| 跳转：笔记 → Canvas | 阅读/Live Preview 模式点击高亮 |
-| 跳转：Canvas → 笔记 | 双击 Canvas 节点 |
-| 沉浸摘录模式 | 设置 → **沉浸摘录模式**：鼠标松开有选区即自动摘录 |
-| 摘录后自动同步 | 设置 → **摘录后自动同步**：摘录后立即创建 Canvas 节点 |
-
----
+| 同步到 Canvas | Ribbon 图标或 command palette |
+| 跳转：笔记 → Canvas | Reading/Live Preview 模式点击高亮 |
+| 跳转：Canvas → 笔记 | 双击 CanvasMargin 节点 |
+| 沉浸摘录模式 | Settings → **Immersive mode** |
+| 摘录后自动同步 | Settings → **Auto sync** |
 
 ## 安装
 
-### 手动安装（当前）
+### 手动安装
 
-1. 从最新 Release 下载 `main.js`、`manifest.json`、`styles.css`。
-2. 复制到 `.obsidian/plugins/canvas-margin/`。
-3. 在 **设置 → 第三方插件** 中启用。
+1. 从最新 release 下载 `main.js`、`manifest.json`、`styles.css`。
+2. 复制到 `.obsidian/plugins/canvas-annotator/`。
+3. 在 **Settings → Community Plugins** 中启用插件。
 
-### BRAT（测试版）
+### BRAT
 
-在 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 中添加 `your-github-username/canvas-annotator`。
-
----
+在 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 中添加 `YangZhaoWeblog/CanvasMargin`。
 
 ## 使用方法
 
 ### 高亮文字
 
-1. 在 Live Preview 或编辑模式下打开 Markdown 笔记。
-2. 选中任意文字。
-3. 浮动工具栏出现后点击 **✎ 摘录**。
+1. 在 Live Preview 或 Editing mode 打开 Markdown 笔记。
+2. 选中文字。
+3. 在浮动工具栏点击 **✎ 摘录**。
 
-或在设置中开启**沉浸摘录模式**：鼠标松开有选区时自动摘录，无需点击工具栏。
+也可以开启 **Immersive mode**：鼠标松开时如果有选区，就立即创建 mark。
 
 ### 同步到 Canvas
 
-打开一个 Canvas 文件，点击 **↻** Ribbon 图标（或笔记顶部的同步按钮）。新摘录会以文本节点的形式纵向排列在 Canvas 上。
+打开一个 Canvas 文件，然后点击 **↻** ribbon icon，或在 command palette 运行 `Canvas Annotator: Sync annotations`。
 
-开启**摘录后自动同步**后，每次摘录完毕会立即在当前 Canvas 创建节点，无需手动同步。
+开启 **Auto sync** 后，如果当前正好有一个可见 note 和一个可见 Canvas，摘录后会立即创建 Canvas node。
 
 ### 双向跳转
 
-- **笔记 → Canvas**：在阅读模式或 Live Preview 的已渲染行中点击高亮文字。
+- **笔记 → Canvas**：在 Reading mode 或 rendered Live Preview 中点击高亮。
 - **Canvas → 笔记**：双击 CanvasMargin 节点。
 
 ### 取消高亮
 
-点击高亮区域内的任意位置，工具栏会显示 **✂ 取消**，点击后 `<mark>` 标签被移除，恢复纯文本。
-
----
+点击高亮内任意位置，然后在浮动工具栏点击 **✂ 取消**。插件会移除 `<mark>` 标签，保留原文。
 
 ## 设置项
 
 | 设置 | 默认 | 说明 |
-|------|------|------|
-| 摘录颜色 | 青色 (5) | 新摘录的高亮颜色和 Canvas 节点颜色 |
-| 节点间距 | 20 px | Canvas 中自动排列节点的垂直间距 |
-| 沉浸摘录模式 | 关 | 鼠标松开有选区 → 立即摘录 |
-| 摘录后自动同步 | 关 | 摘录后若有打开的 Canvas 则立即同步 |
+|---|---|---|
+| Highlight color | Cyan (5) | 新 mark 和 Canvas node 的颜色 |
+| Node gap | 20 px | 自动排列 Canvas node 的纵向间距 |
+| Immersive mode | Off | 鼠标松开有选区时立即创建 mark |
+| Auto sync | Off | split pair 有效时，摘录后立即创建 Canvas node |
 
----
+## 实现原理
 
-## 实现原理（给好奇的人）
-
-- 高亮以 `<mark class="cN" id="anc-{nanoid}">文字</mark>` 形式直接写入 Markdown 源码——不需要单独数据库，不污染 frontmatter。
-- Canvas 节点内嵌 `<!--card:{"anc":"..."}-->` 注释，与源高亮双向关联。
-- 同步时扫描 vault 中**所有** `.canvas` 文件，防止同一摘录在多个 Canvas 间重复创建节点。
-- 浮动工具栏通过 `mousedown` 事件在 CodeMirror 折叠 decoration 之前捕获 mark 元素位置，确保 Live Preview 模式下工具栏稳定出现。
-
----
+- 高亮直接写入 Markdown：`<mark class="cN" id="anc-{nanoid}">文字</mark>`。
+- 旧格式 `class="cN anc-xxx"` 仍可读取，用于兼容已有笔记。
+- Canvas node 的链接元数据存在顶层 JSON 字段：`"canvasMargin": { "anc": "..." }`。
+- 同步会扫描 vault 中所有 `.canvas` 文件，避免同一个 anchor 重复创建节点。
 
 ## 兼容性
 
-- Obsidian 1.1+
-- 旧格式高亮（`class="cN anc-xxx"`）完全兼容，无需迁移。
+- Obsidian 1.5.0+
+- Desktop only
 
----
+## 给 Contributors
+
+- [AGENTS.md](AGENTS.md) — agent 入口和 project map
+- [harness/](harness/) — operational rules
+- [docs/design-spec.md](docs/design-spec.md) — current design summary
+- [PROGRESS.md](PROGRESS.md) / [DECISIONS.md](DECISIONS.md) — 当前状态和关键原因
 
 ## License
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pre_commit_check.sh — 完整本地门禁
-# 串联 razor-block / wip / test-guard + project make check
+# 串联 razor-block / wip / test-guard + npm run build
 
 set -euo pipefail
 
@@ -19,10 +19,7 @@ run "razor-block"     "${SCRIPTS}/check_razor_block.sh"
 run "wip-equals-one"  "${SCRIPTS}/check_wip.sh"
 run "test-guard"      "${SCRIPTS}/check_test_guard.sh"
 
-# 项目级 make check（如存在）
-if [[ -f "${REPO_ROOT}/Makefile" ]] && grep -q '^check:' "${REPO_ROOT}/Makefile"; then
-    echo "→ make check"
-    cd "$REPO_ROOT" && make check
-fi
+echo "→ npm run build"
+cd "$REPO_ROOT" && npm run build
 
 echo "✓ pre-commit gate passed"
