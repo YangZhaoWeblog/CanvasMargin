@@ -28,8 +28,8 @@
 ## Verification Gate
 
 - Docs-only：实际检查 links/rendering；一般不需要 build，除非 docs 引用了 generated facts。
-- Pure helper change：targeted Vitest + `npm run build`。
-- Cross-module source change：相关 Vitest files、`npm test`、`npm run build`。
+- Pure helper change：targeted Vitest + `npm run lint` + `npm run build`。
+- Cross-module source change：相关 Vitest files、`npm run lint`、`npm test`、`npm run build`。
 - Obsidian integration change：automated gates + `testing.md` 的 manual vault checklist。
 
 ## Circuit Breaker

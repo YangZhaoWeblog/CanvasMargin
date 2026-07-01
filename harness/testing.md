@@ -10,6 +10,7 @@
 代码改动后运行：
 
 ```bash
+npm run lint
 npm run build
 npm test
 ```
@@ -29,6 +30,13 @@ npx vitest run -t "scanCanvasJsonAncs"
 - `tests/jumper.test.ts`: Canvas 和 Markdown lookup helpers。
 - `tests/toolbar.test.ts`: toolbar action decision。
 
+## TDD / PGE
+
+- Pure behavior change 优先 Red -> Green -> Refactor。
+- PGE task 的 TDD 由 Generator 承担：一个 behavior test 或 tracer bullet 对应一个最小实现。
+- 无法自动化测试的 Obsidian runtime 行为，必须写明原因并给出最小 manual verification cut。
+- Evaluator 必须检查 tests 未被削弱，且 TDD / tracer evidence 足够。
+
 ## Manual Obsidian Verification
 
 触碰 `main.ts`、UI、settings、workspace events、Canvas creation 或 jump behavior 时必须手测。
@@ -46,6 +54,12 @@ Checklist:
 - settings reload 后仍持久化。
 
 如果无法 manual verify，final answer 必须说明，并指出 affected risk。
+
+## Coverage Boundary
+
+- Vitest 覆盖 pure functions；不覆盖 Obsidian runtime lifecycle、workspace leaves、Canvas DOM events 或 settings UI。
+- `npm run lint` 覆盖官方 Obsidian plugin rules 的静态部分；warnings 不等于 release blocker，但需要在 review 中显式说明。
+- Obsidian integration 正确性最终靠 test vault manual verification。
 
 ## Test Guard
 

@@ -5,6 +5,31 @@ mark.c4 { background: var(--color-green); }
 mark.c5 { background: var(--color-cyan); }
 mark.c6 { background: var(--color-purple); }
 
+.canvas-annotator-swatch-container {
+  display: flex;
+  gap: 6px;
+}
+
+.canvas-annotator-swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.canvas-annotator-swatch--selected {
+  border-color: var(--text-normal);
+}
+
+.canvas-annotator-swatch-1 { background: var(--color-red); }
+.canvas-annotator-swatch-2 { background: var(--color-orange); }
+.canvas-annotator-swatch-3 { background: var(--color-yellow); }
+.canvas-annotator-swatch-4 { background: var(--color-green); }
+.canvas-annotator-swatch-5 { background: var(--color-cyan); }
+.canvas-annotator-swatch-6 { background: var(--color-purple); }
+
 /* Status bar toggle */
 .canvas-annotator-status {
   cursor: pointer;
@@ -30,14 +55,20 @@ mark.c6 { background: var(--color-purple); }
 /* Floating toolbar */
 .canvas-annotator-toolbar {
   position: fixed;
+  top: var(--canvas-annotator-toolbar-top);
+  left: var(--canvas-annotator-toolbar-left);
+  display: flex;
+  transform: translateX(-50%);
   z-index: 1000;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   padding: 2px 4px;
-  display: flex;
   gap: 2px;
+}
+.canvas-annotator-toolbar--hidden {
+  display: none;
 }
 .canvas-annotator-toolbar button {
   background: transparent;

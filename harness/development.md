@@ -12,12 +12,13 @@
 - Source: `src/**/*.ts`。
 - Tests: `tests/*.test.ts`。
 - Build output: `main.js`。
-- Harness rebuild 时当前分支是 `main`，ahead of `origin/main`。
+- Lint: `eslint-plugin-obsidianmd` recommended config plus local TypeScript overrides。
 
 ## Commands
 
 ```bash
 npm run dev              # esbuild watch
+npm run lint             # ESLint + Obsidian plugin rules
 npm run build            # tsc -noEmit -skipLibCheck + production bundle
 npm test                 # vitest run
 npm run test:watch       # vitest watch
@@ -34,8 +35,7 @@ Script hooks 已存在，但可能没有接入 git。手动运行仍算 local ga
 1. `package.json`, `manifest.json`, `tsconfig.json`, `esbuild.config.mjs`。
 2. 相关 `src/` owner module 及其 tests。
 3. 已知 code facts 后，再读 `README.md` / `README-zh.md` / `docs/design-spec.md`。
-4. 旧 implementation plans 已删除；不要从 git history 复制旧实现，除非用户明确要求考古。
-5. `harness/failures.md` 用于避免重复踩坑。
+4. `harness/failures.md` 用于避免重复踩坑。
 
 ## Scope Classification
 
@@ -49,5 +49,4 @@ Medium / large work 应使用 `pge-protocol.md`，除非用户明确要求小范
 
 - Preserve dirty user work。
 - 不为了适配 broken code 修改 tests。
-- 不信 stale generated docs 或 historical docs 胜过 code。
 - 搜索仓库优先用 `rg` / `rg --files`。

@@ -47,17 +47,16 @@ export class FloatingToolbar {
     this.onAnnotate = onAnnotate;
     this.onRemove = onRemove;
 
-    this.el = document.createElement("div");
-    this.el.className = "canvas-annotator-toolbar";
-    this.el.style.display = "none";
-    document.body.appendChild(this.el);
+    this.el = document.body.createDiv({
+      cls: ["canvas-annotator-toolbar", "canvas-annotator-toolbar--hidden"],
+    });
   }
 
   show(action: "annotate" | "remove", rect: DOMRect) {
     // Clear previous content
     while (this.el.firstChild) this.el.removeChild(this.el.firstChild);
 
-    const btn = document.createElement("button");
+    const btn = this.el.createEl("button");
     if (action === "annotate") {
       btn.textContent = "✎ 摘录";
       btn.addEventListener("mousedown", (e) => {
@@ -73,18 +72,15 @@ export class FloatingToolbar {
         this.hide();
       });
     }
-    this.el.appendChild(btn);
 
     // Position above the selection
-    this.el.style.display = "flex";
-    this.el.style.position = "fixed";
-    this.el.style.top = `${rect.top - 40}px`;
-    this.el.style.left = `${rect.left + rect.width / 2}px`;
-    this.el.style.transform = "translateX(-50%)";
+    this.el.style.setProperty("--canvas-annotator-toolbar-top", `${rect.top - 40}px`);
+    this.el.style.setProperty("--canvas-annotator-toolbar-left", `${rect.left + rect.width / 2}px`);
+    this.el.removeClass("canvas-annotator-toolbar--hidden");
   }
 
   hide() {
-    this.el.style.display = "none";
+    this.el.addClass("canvas-annotator-toolbar--hidden");
   }
 
   destroy() {

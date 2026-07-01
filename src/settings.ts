@@ -1,14 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type CanvasAnnotatorPlugin from "./main";
 
-const COLOR_CSS_VARS: Record<string, string> = {
-  "1": "--color-red",
-  "2": "--color-orange",
-  "3": "--color-yellow",
-  "4": "--color-green",
-  "5": "--color-cyan",
-  "6": "--color-purple",
-};
+const COLOR_IDS = ["1", "2", "3", "4", "5", "6"];
 
 export class CanvasAnnotatorSettingTab extends PluginSettingTab {
   plugin: CanvasAnnotatorPlugin;
@@ -21,7 +14,6 @@ export class CanvasAnnotatorSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Canvas Annotator Settings" });
 
     // ── Color picker ──
     const colorSetting = new Setting(containerEl)
@@ -29,30 +21,23 @@ export class CanvasAnnotatorSettingTab extends PluginSettingTab {
       .setDesc("新摘录的高亮颜色和 Canvas 节点颜色");
 
     const swatchContainer = colorSetting.controlEl.createDiv();
-    swatchContainer.style.display = "flex";
-    swatchContainer.style.gap = "6px";
+    swatchContainer.addClass("canvas-annotator-swatch-container");
 
     const swatches: HTMLElement[] = [];
-    for (const [idx, cssVar] of Object.entries(COLOR_CSS_VARS)) {
+    for (const idx of COLOR_IDS) {
       const swatch = swatchContainer.createDiv();
-      const resolved = getComputedStyle(document.body).getPropertyValue(cssVar).trim();
-      swatch.style.backgroundColor = resolved || cssVar;
-      swatch.style.width = "28px";
-      swatch.style.height = "28px";
-      swatch.style.borderRadius = "6px";
-      swatch.style.cursor = "pointer";
-      swatch.style.border = "2px solid transparent";
-      swatch.style.transition = "border-color 0.15s";
+      swatch.addClass("canvas-annotator-swatch");
+      swatch.addClass(`canvas-annotator-swatch-${idx}`);
 
       if (idx === this.plugin.settings.annotationColor) {
-        swatch.style.border = "2px solid var(--text-normal)";
+        swatch.addClass("canvas-annotator-swatch--selected");
       }
 
-      swatch.addEventListener("click", async () => {
+      swatch.addEventListener("click", () => {
         this.plugin.settings.annotationColor = idx;
-        await this.plugin.saveSettings();
-        for (const s of swatches) s.style.border = "2px solid transparent";
-        swatch.style.border = "2px solid var(--text-normal)";
+        void this.plugin.saveSettings();
+        for (const s of swatches) s.removeClass("canvas-annotator-swatch--selected");
+        swatch.addClass("canvas-annotator-swatch--selected");
       });
       swatches.push(swatch);
     }

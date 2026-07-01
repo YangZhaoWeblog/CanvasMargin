@@ -19,6 +19,9 @@ run "razor-block"     "${SCRIPTS}/check_razor_block.sh"
 run "wip-equals-one"  "${SCRIPTS}/check_wip.sh"
 run "test-guard"      "${SCRIPTS}/check_test_guard.sh"
 
+echo "→ npm run lint"
+cd "$REPO_ROOT" && npm run lint
+
 echo "→ npm run build"
 cd "$REPO_ROOT" && npm run build
 

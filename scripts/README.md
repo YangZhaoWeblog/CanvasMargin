@@ -55,8 +55,8 @@ bash scripts/pre_push_check.sh
 | `check_wip.sh` | `PROGRESS.md` WIP count <= 1 | pre-commit |
 | `check_test_guard.sh` | 防止 AI 删除/削弱测试断言 | pre-commit |
 | `check_commit_msg.sh` | Conventional Commits 格式 | commit-msg |
-| `pre_commit_check.sh` | razor + WIP + test-guard + `npm run build` | pre-commit / manual |
-| `pre_push_check.sh` | `npm test` + clean-state check | pre-push / manual |
+| `pre_commit_check.sh` | razor + WIP + test-guard + `npm run lint` + `npm run build` | pre-commit / manual |
+| `pre_push_check.sh` | `npm run lint` + `npm run build` + `npm test` + clean-state check | pre-push / manual |
 
 ## 注意
 

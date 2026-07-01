@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "harness-init": {
+      "source": "YangZhaoWeblog/skills-develop",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/harness-init/SKILL.md",
+      "computedHash": "aa269c2f74b3fd8bf0863ea020c23506f7fd9c033da64be42b629be404d0cd76"
+    },
+    "harness-score": {
+      "source": "YangZhaoWeblog/skills-develop",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/harness-score/SKILL.md",
+      "computedHash": "de8356dba7e1dd111dd6b91911e889887c17948555d6f6df5c8f18dd7f83348e"
+    }
+  }
+}

@@ -35,7 +35,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       () => {
         const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!mdView) return;
-        this.doAnnotate(mdView);
+        void this.doAnnotate(mdView);
       },
       () => {
         const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -45,12 +45,12 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     );
 
     // mouseup listener — shows toolbar or auto-annotates
-    this.mouseupHandler = () => setTimeout(() => this.handleMouseup(), 150);
-    document.addEventListener("mouseup", this.mouseupHandler);
+    this.mouseupHandler = () => window.setTimeout(() => this.handleMouseup(), 150);
+    this.registerDomEvent(document, "mouseup", this.mouseupHandler);
 
     // Hide toolbar on scroll
     this.scrollHandler = () => { this.toolbar?.hide(); };
-    document.addEventListener("scroll", this.scrollHandler, true);
+    this.registerDomEvent(document, "scroll", this.scrollHandler, { capture: true });
 
     // ── Commands ──
     this.addCommand({
@@ -59,20 +59,20 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       editorCallback: (_editor) => {
         const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!mdView) return;
-        this.doAnnotate(mdView);
+        void this.doAnnotate(mdView);
       },
     });
 
     this.addCommand({
       id: "sync-annotations",
       name: "Sync annotations to Canvas",
-      callback: () => this.syncAnnotations(),
+      callback: () => { void this.syncAnnotations(); },
     });
 
     this.addCommand({
       id: "jump-to-annotation",
       name: "Jump to linked annotation",
-      callback: () => this.jumpToAnnotation(),
+      callback: () => { void this.jumpToAnnotation(); },
     });
 
     // ── Canvas double-click → jump to MD ──
@@ -106,7 +106,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
         markEl.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          this.jumpToCanvasByAncId(ancId!);
+          void this.jumpToCanvasByAncId(ancId);
         });
       });
     });
@@ -115,12 +115,6 @@ export default class CanvasAnnotatorPlugin extends Plugin {
   }
 
   onunload() {
-    if (this.mouseupHandler) {
-      document.removeEventListener("mouseup", this.mouseupHandler);
-    }
-    if (this.scrollHandler) {
-      document.removeEventListener("scroll", this.scrollHandler, true);
-    }
     this.toolbar?.destroy();
   }
 
@@ -152,7 +146,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
     // autoAnnotate mode: skip toolbar, annotate immediately
     if (action === "annotate" && this.settings.autoAnnotate) {
       if (!shouldSkipAnnotation(doc, from, to)) {
-        this.doAnnotate(mdView);
+        void this.doAnnotate(mdView);
       }
       return;
     }
@@ -344,7 +338,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
           .find((l) => (l.view as any)?.file?.path === file.path);
         const leaf = existingLeaf ?? this.app.workspace.getLeaf("split");
         await leaf.openFile(file);
-        setTimeout(() => {
+        window.setTimeout(() => {
           const cv = leaf.view as unknown as CanvasView;
           if (!cv?.canvas) return;
           const node = cv.canvas.nodes.get(result.nodeId);
@@ -427,13 +421,13 @@ export default class CanvasAnnotatorPlugin extends Plugin {
       let lastSelectedNode: any = null;
 
       // capture=true: fires before Canvas's own mousedown handler
-      container.addEventListener("mousedown", () => {
+      this.registerDomEvent(container, "mousedown", () => {
         const selected = [...canvasView.canvas.selection];
         lastSelectedNode = selected.length > 0 ? selected[0] : null;
       }, true);
 
       // capture=true + preventDefault: fires before Canvas, blocks node editor on anc nodes
-      container.addEventListener("dblclick", async (e: MouseEvent) => {
+      this.registerDomEvent(container, "dblclick", async (e: MouseEvent) => {
         if (!lastSelectedNode) return;
         const ancId = readMarginMeta(lastSelectedNode.getData());
         lastSelectedNode = null;
@@ -459,7 +453,7 @@ export default class CanvasAnnotatorPlugin extends Plugin {
         await leaf.openFile(file);
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
 
-        setTimeout(() => {
+        window.setTimeout(() => {
           const mdView = leaf.view as unknown as MarkdownView;
           if (!mdView) return;
 
@@ -473,14 +467,6 @@ export default class CanvasAnnotatorPlugin extends Plugin {
 
           // Reading mode: find the anchor element in the rendered DOM and scroll to it
           const container = leaf.view.containerEl;
-          console.log("[canvas-annotator] reading mode jump, ancId:", ancId);
-          console.log("[canvas-annotator] container marks:", container.querySelectorAll("mark").length);
-          // Debug: dump first 3 mark elements' attributes
-          container.querySelectorAll("mark").forEach((m, i) => {
-            if (i < 3) console.log(`[canvas-annotator] mark[${i}] id="${m.id}" class="${m.className}"`);
-          });
-
-          // Try multiple selector strategies
           let ancEl: Element | null = null;
           try { ancEl = container.querySelector(`[id="anc-${ancId}"]`); } catch { /* */ }
           if (!ancEl) {
@@ -492,7 +478,6 @@ export default class CanvasAnnotatorPlugin extends Plugin {
               (m) => m.id === `anc-${ancId}` || m.classList.contains(`anc-${ancId}`)
             ) ?? null;
           }
-          console.log("[canvas-annotator] ancEl found:", !!ancEl);
           if (ancEl) {
             ancEl.scrollIntoView({ behavior: "smooth", block: "center" });
           } else {

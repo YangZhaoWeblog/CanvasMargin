@@ -1,7 +1,6 @@
 # CanvasMargin (`canvas-annotator`)
 
-> AI Agent 入口。保持短小；细则放在 `harness/*.md`。
-> 当前 harness 于 2026-07-01 基于真实仓库状态重建。旧 docs 可能漂移；使用前先用代码和测试校验。
+> AI Agent 入口。当前事实以 code/tests/config 为准；细则见 `harness/*.md`。
 
 ## Identity
 
@@ -24,6 +23,7 @@
 
 ```bash
 npm run dev
+npm run lint
 npm run build
 npm test
 npm run test:watch
@@ -33,7 +33,7 @@ bash scripts/pre_commit_check.sh
 bash scripts/pre_push_check.sh
 ```
 
-`npm run build` 是主要 local gate：`tsc -noEmit -skipLibCheck` + production esbuild。
+主要 local gate：`npm run lint` + `npm run build` + `npm test`。
 
 ## Structure
 
@@ -49,23 +49,26 @@ src/
   canvas.d.ts    local declarations for internal Canvas APIs
 tests/           Vitest coverage for pure functions
 scripts/         optional local gates and hook helpers
-docs/            current design summary only; old implementation plans were removed
+docs/            current design summary
+docs/pge/        PGE sprint contract and evaluator templates
+.codex/agents/   PGE Generator / Evaluator prompts
 harness/         operational rules for agents and contributors
 ```
 
 ## Hard Rules
 
 1. 改动前读取本文件、相关 `harness/*.md`、目标源码、测试，以及 `harness/failures.md`。
-2. Truth source 顺序：`src/` 实际行为 > `tests/` > `package.json` / `manifest.json` > 当前 README / `docs/design-spec.md`。
+2. Truth source 顺序：`src/` 实际行为 > `tests/` > `package.json` / `manifest.json` > README / `docs/design-spec.md`。
 3. 保护已有 local changes；不要 revert 无关用户改动。
 4. `AGENTS.md` 保持 200 行以内；细节下沉到 `harness/`。
 5. 不得为了让实现通过而修改 test assertions。行为确实变化时，先记录 decision。
 6. 新 mark 使用 `<mark class="cN" id="anc-{nanoid}">text</mark>`；继续读取旧 `class="... anc-..."` 格式。
 7. Canvas metadata 放在 node 顶层 `canvasMargin: { anc }`；不要藏进 `node.text` HTML comment。
 8. 交付前移除临时 `console.*` diagnostics，除非用户明确要求保留。
-9. 代码改动后运行 scoped tests 和 `npm run build`；无法运行时说明原因。
+9. 代码改动后运行 scoped tests、`npm run lint` 和 `npm run build`；无法运行时说明原因。
 10. 触碰用户可见 Obsidian 行为时需要 manual vault verification；未手测必须记录风险。
-11. 用户要求 commit 时，commit message 使用 Conventional Commits：`type(scope): message`。
+11. Medium+ 或 risky work 进入 PGE；无法独立分发 Generator / Evaluator 时记录 fallback，禁止 silent solo。
+12. 用户要求 commit 时，commit message 使用 Conventional Commits：`type(scope): message`。
 
 ## Task Routing
 
@@ -84,7 +87,7 @@ harness/         operational rules for agents and contributors
 ## Workflow
 
 1. 先说明 concrete goal，并写清是否 `无待澄清`。
-2. 先从真实 code/config 收集 context；docs 只当 historical input。
+2. 先从真实 code/config 收集 context，再读 current docs。
 3. 做 scope classification：small / medium / large；medium+ risky work 才进入 PGE。
 4. 行为改动优先 TDD：补或定位 failing test，再做 minimal fix，然后 verify。
 5. 保持 narrow edits，尊重现有 module ownership。
@@ -102,6 +105,8 @@ harness/         operational rules for agents and contributors
 | [testing.md](harness/testing.md) | unit tests 与 manual Obsidian verification |
 | [code-review.md](harness/code-review.md) | review stance 与 checklist |
 | [pge-protocol.md](harness/pge-protocol.md) | large-work protocol |
+| [.codex/agents/](.codex/agents/) | PGE Generator / Evaluator prompts |
+| [docs/pge/](docs/pge/) | Sprint Contract / Evaluator templates |
 | [api-standards.md](harness/api-standards.md) | Obsidian, Canvas, mark, settings contracts |
 | [dependency-map.md](harness/dependency-map.md) | internal/external dependency boundaries |
 | [database.md](harness/database.md) | database status stub |

@@ -1,8 +1,5 @@
 # CanvasMargin Current Design
 
-> status: current
-> 本文件只描述当前实现与当前产品边界；历史错误实现不保留在这里。
-
 ## Product Shape
 
 CanvasMargin 是 Obsidian desktop plugin。核心 workflow：

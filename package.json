@@ -6,17 +6,26 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@eslint/json": "^0.14.0",
     "@types/node": "^22.0.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.4.0",
     "obsidian": "latest",
     "typescript": "^5.8.0",
-    "vitest": "^3.0.0"
+    "typescript-eslint": "^8.62.1",
+    "vitest": "^3.2.6"
   },
   "dependencies": {
     "nanoid": "^5.1.0"
+  },
+  "overrides": {
+    "vite": "6.4.3"
   }
 }

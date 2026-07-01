@@ -8,6 +8,7 @@
 ## Current Facts
 
 - Release artifact set: `main.js`, `manifest.json`, `styles.css`。
+- Community metadata set: `README.md`, `LICENSE`, `manifest.json`, `versions.json`。
 - Bundle entry: `src/main.ts`。
 - Bundle format: Obsidian 使用的 CommonJS。
 - Manifest id: `canvas-annotator`。
@@ -21,8 +22,10 @@
 运行：
 
 ```bash
+npm run lint
 npm run build
 npm test
+npm audit
 ```
 
 然后在 Obsidian test vault 手动验证：
@@ -38,7 +41,9 @@ npm test
 
 - 不手改 generated `main.js`。
 - 不提交 `dist/` 或 `node_modules/`。
-- 发布时保持 `manifest.json` version 与 release notes 对齐。
+- 发布时 GitHub release tag 必须等于 `manifest.json` version。
+- Release assets 上传 `main.js`, `manifest.json`, `styles.css`。
+- 更新 `versions.json`，保持 plugin version 到最低 Obsidian version 的映射。
 - Manifest id change 视为 breaking；已有安装和社区引用可能依赖它。
 
 ## Known Release TODOs

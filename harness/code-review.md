@@ -18,6 +18,7 @@
 - 用户数据风险：Markdown 和 `.canvas` mutation 必须 minimal、可解释、可回退。
 - Verification gap：pure functions 要有 Vitest；Obsidian UI paths 要 manual vault check。
 - Debug leftovers：交付代码不应遗留临时 `console.*`。
+- PGE execution：medium+ / risky work 是否有 Sprint Contract、Generator/Evaluator 分角或 fallback。
 
 ## Output Format
 
@@ -33,3 +34,4 @@
 - 恢复旧 text-comment metadata helper 或旧 top sync panel，而没有新的 decision。
 - 依据 stale docs 改规则，而不是核对当前 `src/` 和 tests。
 - Build 或相关 tests 被跳过且无理由。
+- PGE Generator / Evaluator silently collapsed into one role on medium+ work。

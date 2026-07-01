@@ -2,7 +2,7 @@
 
 **Highlight text in notes, sync excerpts to Obsidian Canvas as linked nodes.**
 
-> AI agents and contributors: read [AGENTS.md](AGENTS.md) before changing code. 中文文档：[README-zh.md](README-zh.md)
+> 中文文档：[README-zh.md](README-zh.md)
 
 ---
 
@@ -89,6 +89,19 @@ Click inside a highlight, then click **✂ Remove** in the floating toolbar. The
 
 - Obsidian 1.5.0+
 - Desktop only
+
+## Release Checklist
+
+Before publishing a GitHub release:
+
+```bash
+npm run lint
+npm run build
+npm test
+npm audit
+```
+
+The release tag must match `manifest.json` `version`. Upload `main.js`, `manifest.json`, and `styles.css` as release assets.
 
 ## For Contributors
 
