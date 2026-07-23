@@ -39,20 +39,20 @@ bash scripts/pre_push_check.sh
 
 ```text
 src/
-  main.ts        plugin entry, commands, Obsidian workspace orchestration
-  annotator.ts   pure Markdown mark insertion/removal
-  syncer.ts      mark scan, Canvas metadata scan, diff, node creation
-  jumper.ts      pure lookup helpers for note/Canvas jumps
-  toolbar.ts     selection action helper and floating toolbar DOM
-  settings.ts    Obsidian setting tab
-  models.ts      shared regex, settings, constants, canvasMargin helpers
-  canvas.d.ts    local declarations for internal Canvas APIs
-tests/           Vitest coverage for pure functions
-scripts/         optional local gates and hook helpers
-docs/            current design summary
-docs/pge/        PGE sprint contract and evaluator templates
+  main.ts        插件入口、命令注册、Obsidian workspace 编排
+  annotator.ts   纯 Markdown mark 插入/移除逻辑
+  syncer.ts      mark 扫描、Canvas metadata 扫描、diff、节点创建
+  jumper.ts      note/Canvas 双向跳转的纯查找 helper
+  toolbar.ts     选区动作判断 helper 和浮动 toolbar DOM
+  settings.ts    Obsidian 设置页
+  models.ts      共享正则、settings、常量、canvasMargin helper
+  canvas.d.ts    Obsidian Canvas 内部 API 的本地类型声明
+tests/           纯函数的 Vitest 覆盖
+scripts/         可选 local gates 和 hook helper
+docs/            当前设计摘要和架构导览
+docs/pge/        PGE sprint contract 和 evaluator 模板
 .codex/agents/   PGE Generator / Evaluator prompts
-harness/         operational rules for agents and contributors
+harness/         agents 和 contributors 的操作规则
 ```
 
 ## Hard Rules
@@ -113,3 +113,4 @@ harness/         operational rules for agents and contributors
 | [deployment.md](harness/deployment.md) | package/release rules |
 | [glossary.md](harness/glossary.md) | project vocabulary |
 | [failures.md](harness/failures.md) | incidents and learned rules |
+| [docs/architecture.md](docs/architecture.md) | 后端分层类比和项目阅读顺序 |
