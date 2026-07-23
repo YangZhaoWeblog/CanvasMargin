@@ -8,8 +8,6 @@ export default defineConfig([
       "main.js",
       "node_modules/",
       "dist/",
-      ".harness/tmp/",
-      ".pge/code/",
     ],
   },
   ...obsidianmd.configs.recommended,

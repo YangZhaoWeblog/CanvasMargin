@@ -116,7 +116,7 @@ tests/jumper.test.ts      lookup helpers
 tests/toolbar.test.ts     toolbar action decision
 ```
 
-自动测试没有完整覆盖 Obsidian runtime integration。触碰 `main.ts`、settings UI、workspace events、Canvas creation 或 jump behavior 时，需要按 `harness/testing.md` 做 manual vault verification。
+自动测试没有完整覆盖 Obsidian runtime integration。触碰 `main.ts`、settings UI、workspace events、Canvas creation 或 jump behavior 时，需要按 `harness/api-standards.md` 做 manual vault verification。
 
 ## Where To Change Things
 

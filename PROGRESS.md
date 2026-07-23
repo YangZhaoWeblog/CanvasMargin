@@ -4,6 +4,7 @@
 
 ## 已完成
 
+- [x] 2026-07-23 按 ownership 刷新 Harness：退役 legacy owners/checkers，非代码更新不进入 PGE，保留独立 review
 - [x] 2026-07-01 接入 PGE Generator / Evaluator baseline：新增 `.codex/agents` 与 `docs/pge` 模板，升级 PGE 协议
 - [x] 2026-07-01 对齐 Obsidian plugin 规范 gate：补 LICENSE/versions.json，加入 lint/build/test/audit 验证，清理 debug log 和 DOM listener lifecycle
 - [x] 2026-07-01 清理文档漂移：删除旧 implementation plans/specs，重写 current design doc，对齐 README、BRAT、hook scripts
@@ -13,6 +14,7 @@
 
 ## 下一步候选
 
+- [ ] 将 external `.agents` Harness adapter 的 root-profile reference drift 交由其 owner 更新；当前仓按 external-owner policy 保持其内容不变
 - [ ] 用 Obsidian test vault 手测 highlight/sync/jump/settings 全链路
 - [ ] 收敛 Canvas/internal API 的 `any` 类型债
 - [ ] 评估 `main.ts` integration 层拆分和 `editor.setValue` range-edit 重构

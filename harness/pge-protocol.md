@@ -1,107 +1,120 @@
-> status: active
-> owner: large-workflow
-> layer: profile
-> 本文件负责 Planner / Generator / Evaluator 协议；不替代 AGENTS.md 主流程。
-
 # PGE Protocol
+
+> status: active
+> owner: pge-protocol
+> layer: profile
+> 本文件负责 Planner / Generator / Evaluator 的 code-behavior state machine、artifacts 和 acceptance gates；runtime orchestration 归 `$pge-workflow`。
 
 ## Activation
 
-默认进入 PGE：
+PGE 用于 medium+、critical-flow、public-interface、state/schema、cross-module、batch 或 independently accepted 的**代码行为**工作。Small local code work 在 Coding Start Check 后可 solo，但仍需 proportional verification/review。
 
-- medium / large work；
-- 跨多个 source modules；
-- 触碰 Obsidian integration behavior：`main.ts`、workspace events、settings、Canvas jump/sync；
-- 触碰 user data path：Markdown mark、`.canvas`、`canvasMargin`；
-- release / hook / harness 规则改动；
-- repeated failure 或需要独立验收的改动。
-
-Small low-risk work 可 solo：docs typo、单文件小配置、无行为变化的小修。Small risky work 仍需要 independent evaluator。
+Harness、文档与其他 non-code 更新不使用 PGE，也不因文件数量、hook 或静态 configuration 而触发 Human Start。若一个任务同时改代码行为和非代码 artifact，按代码行为整体评估 PGE。
 
 ## Roles
 
-| Role | Responsibility | Output |
-|---|---|---|
-| Planner | 冻结 goal、scope、acceptance、non-goals、order、first tracer bullet、fallback | `docs/pge/<sprint>-spec.md` 或 task-local contract |
-| Generator | 只按 locked contract 实现，行为改动走 TDD tracer bullet | code、tests、`verify_cmd`、contract/status update |
-| Evaluator | 独立挑战 contract 与 diff，不改文件 | `PASS` / `PASS_WITH_NOTES` / `FAIL` |
+- Planner 拥有 facts、decision、Contract revision、slice 和 Human Start recording。
+- Generator 只实现 locked 且 human-approved Contract，不编辑 Contract 或 evaluation。
+- Evaluator challenge draft，随后独立评估 integrated diff；不修复 code/tests。
+- Human owner 解决 business choice、批准一个 Contract revision 的 implementation，并接受任何 `PASS_WITH_NOTES` risk。
 
-Project-level Codex agents:
+## Normative Flow
 
-- `.codex/agents/pge-generator.toml`
-- `.codex/agents/pge-evaluator.toml`
+```mermaid
+flowchart TD
+    Planner[Planner]
+    Grill[Grill]
+    ContractDraft[Contract draft]
+    GeneratorProbe[Generator probe]
+    EvaluatorChallenge[Evaluator challenge]
+    ContractLock[Contract lock]
+    HumanStart[Human Start]
+    Generator[Generator]
+    Implementation[Implementation]
+    ParallelJoin[Parallel join]
+    Evaluator[Evaluator]
+    FinalEvaluation[Final evaluation]
+    ThirdFailure[Third failure]
+    CircuitBreaker[Circuit breaker]
+    AgentUnavailable[Agent unavailable]
+    Fallback[Fallback]
+    Planner --> Grill
+    Grill --> ContractDraft
+    ContractDraft --> GeneratorProbe
+    ContractDraft --> EvaluatorChallenge
+    GeneratorProbe --> ContractLock
+    EvaluatorChallenge --> ContractLock
+    ContractLock --> HumanStart
+    HumanStart --> Generator
+    Generator --> Implementation
+    Generator --> ParallelJoin
+    Implementation --> ParallelJoin
+    ParallelJoin --> Evaluator
+    Evaluator --> FinalEvaluation
+    Evaluator -->|FAIL| Generator
+    Evaluator -->|FAIL| Planner
+    ThirdFailure --> CircuitBreaker
+    AgentUnavailable --> Fallback
+```
 
-Templates:
-
-- `docs/pge/spec.template.md`
-- `docs/pge/eval.template.md`
+Pre-Challenge review 不需要 Human Start approval。
 
 ## Sprint Contract
 
-PGE task 至少冻结：
+`docs/pge/<sprint>-spec.md` 记录：
 
-1. goal；
-2. scope；
-3. acceptance criteria；
-4. non-goals；
-5. implementation order；
-6. first tracer bullet：首个失败测试或最小可观察验证切口；
-7. manual Obsidian verification checklist；
-8. fallback / restore condition。
+- goal、scope、acceptance、non-goals 和 implementation order；
+- branch label、Review base/candidate 的 immutable full commit SHA；最终 diff 使用 `git diff <base-sha>...<candidate-sha>`；
+- approved behavior/test seams 或 targeted verification boundary；
+- first tracer bullet、`verify_cmd`、risk、circuit breaker、Grill closure、independent challenge、parallel slices、fallback 和 Human Start state。
 
-Contract 未锁定前，不进生产代码。
+Contract 绑定 behavior/evidence，不绑定不必要的 helper、interface 或 abstraction shape。scope change 回到 Planner 并递增 `contract_revision`。
 
-## Generator Protocol
+Final evaluation 从 clean candidate commit 开始。`git status --short` 不得存在 staged/unstaged in-scope production/test/document change，所有 untracked path 必须分类；dirty bytes 不被 `git diff <base>...<candidate>` 覆盖，因而阻止 evaluation。
 
-- Pre-contract mode 只输出 Implementation Probe，不改 production code 或 tests。
-- Behavior work 使用 tracer bullets：一个行为测试或验证切口 -> 最小实现 -> 下一个行为。
-- 有自动测试条件时先确认 RED；无自动测试条件时写明原因和最小手测切口。
-- 不删除、放宽或改写既有 test assertions 来换取通过。
-- 不越过 contract；scope 扩大时回 Planner。
-- 完成时记录 `verify_cmd` 和未手测风险。
+## Human Start
 
-## Evaluator Protocol
+只有以下条件同时成立时，code implementation 才能开始：
 
-Evaluator 独立于实现者，不改文件。按顺序检查：
-
-1. contract compliance；
-2. tests 未被削弱；
-3. TDD tracer evidence 或无法自动化测试的理由；
-4. Markdown / Canvas user-data safety；
-5. Obsidian lifecycle 与 manual verification gaps；
-6. minimality、local style、剩余风险。
-
-结论只能是：
-
-- `PASS`
-- `PASS_WITH_NOTES`
-- `FAIL`
-
-## Fallback
-
-无法真正分发独立 Generator / Evaluator 时，必须记录：
-
-```json
-{
-  "pge_fallback": {
-    "enabled": true,
-    "reason": "runtime cannot spawn independent PGE agent",
-    "roles_collapsed": ["generator"],
-    "lost_guarantees": ["context isolation"],
-    "mitigations": ["explicit contract", "independent reviewer after implementation"],
-    "restore_condition": "runtime exposes independent PGE agents or user authorizes subagents",
-    "owner_ack_required": false
-  }
-}
+```text
+approved_contract_revision == contract_revision
+channel != ""
+evidence != ""
 ```
 
-允许 fallback；禁止 silent solo。
+此外必须 `status == "approved"`。locked Contract、Grill confirmation、silence、fallback 或 older revision approval 都不足够。
+
+## Required Agent Context
+
+Agent prompt 中 standalone `@path` 是 Harness convention，不是 native Codex include。dispatch 前要求 Agent 直接读取每个路径；必读 `harness/coding-style.md` 与 `harness/code-shape.md`，locked Contract 和 relevant owner 通过 `AGENTS.md` discover。
+
+## Generator
+
+- Pre-contract mode 只返回 implementation probe，不编辑。
+- Implementation mode 核对 Human Start、branch/worktree、scope 和 required context。
+- Behavior code 调用 `$tdd`；Contract-approved seam 满足该 Skill 的 prior user confirmation，只有 unresolved behavior choice 才再问。
+- Non-behavior **code** 使用 Contract 的 targeted verification，不制造 RED/GREEN ceremony。
+- 全部相关 behavior tests GREEN 后，按 injected standards 做 author Review；只针对 concrete current-change finding refactor，然后重跑 affected verification。
+- 返回 changed scope、behavior-test / targeted-verification evidence、triggered schema、`verify_cmd` 和 residual risk。
+
+## Evaluator
+
+Challenge mode 检查 draft 是否 testable、complete、independently decidable，且没有不必要 frozen shape。
+
+Evaluation mode：
+
+1. 核对 Human Start、required context、Contract revision、immutable Review base SHA、clean candidate SHA、classified untracked path 与 scope。
+2. 完整阅读 production diff，并在 tests/Generator rationale 前冻结 **Standards** finding set。
+3. 独立检查 **Spec** 的 missing/incorrect behavior 与 scope creep。
+4. 阅读 tests、Generator evidence、integration/document risk，并应用 `harness/code-review.md` severity。
+5. 只返回 `PASS`、`PASS_WITH_NOTES` 或 `FAIL`；未解决 Critical/Major 必须为 `FAIL`。
+
+## Parallel And Fallback
+
+Parallel code work 需要 independently acceptable slice、disjoint file、separate branch/worktree 和 slice-level `verify_cmd`。shared public interface、schema、state machine、migration、generated file 或 helper hot zone 保持 serial；Planner 负责 integration/final verification。
+
+required Agent 不可用时，记录 collapsed role、lost guarantee、mitigation、restore condition、self-review state、owner acknowledgement 与 independent Evaluator assurance。fallback 不绕过 Human Start，也不能把 generic reviewer 伪装成缺失的 Evaluator。
 
 ## Circuit Breaker
 
-同一 interface / flow 连续 3 轮未通过 tests、reference alignment 或 evaluator review：
-
-1. 停止继续实现；
-2. 记录 mismatch 和 recovery condition；
-3. 回到 Planner / 用户澄清；
-4. 可复用踩坑写入 `harness/failures.md`。
+同一 interface/flow 三次失败后停止 patching，记录 evidence/recovery condition，回到 Planner 或 owner。`FAIL` 阻止 close；`PASS_WITH_NOTES` 仅在 explicit owner acceptance 后关闭。

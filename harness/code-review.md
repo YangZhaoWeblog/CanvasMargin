@@ -1,37 +1,32 @@
-> status: active
-> owner: review
-> layer: universal
-> 本文件负责 code review 方式和 reject 条件；不负责具体实现方案。
-
 # Code Review
 
-## Stance
+> status: active
+> owner: code-review
+> layer: universal
+> 本文件负责 review order、severity、evidence 和 conclusion；领域规则仍归各自 Harness owner。
 
-用户要求 review 时，默认进入 bug/risk review，不做泛泛重写建议。Findings 置顶，按严重程度排序，并引用 file/line。
+## Review Order
 
-## What To Check
+1. 记录 Review base 与 candidate 的 immutable full commit SHA。PGE evaluation 要求 in-scope change 已提交、无 staged/unstaged production diff、每个 untracked path 已分类；随后完整阅读 `git diff <base-sha>...<candidate-sha>`。
+2. **Standards**：在读 tests 或 author rationale 前，按 `coding-style.md`、触发的 `code-shape.md` schema 与相关 API/storage/database owner 冻结 findings。
+3. **Spec**：对照 originating Contract、issue 或 approved plan，识别 missing behavior、incorrect behavior 与 scope creep。
+4. 阅读 tests 与 verification evidence；它们可以确认行为，但不能消除 production findings。
+5. 分别报告两个轴，再给出 required overall conclusion。
 
-- 行为是否偏离 tests、README、manifest 或既有 module contracts。
-- Obsidian lifecycle 是否有问题：未注册/未清理 listener、DOM 泄漏、workspace 假设过强。
-- Canvas metadata 是否仍满足 `canvasMargin: { anc }` current contract。
-- Mark compatibility 是否同时读取 `id="anc-..."` 和旧 class-encoded anchor。
-- 用户数据风险：Markdown 和 `.canvas` mutation 必须 minimal、可解释、可回退。
-- Verification gap：pure functions 要有 Vitest；Obsidian UI paths 要 manual vault check。
-- Debug leftovers：交付代码不应遗留临时 `console.*`。
-- PGE execution：medium+ / risky work 是否有 Sprint Contract、Generator/Evaluator 分角或 fallback。
+不要把 generic smell catalog 粘到每次 review。已记录的 repository rule 优先；schema 的 valid control 阻止机械 finding；tooling-owned formatting 不做人工重审。
 
-## Output Format
+## Severity
 
-1. Findings first，最高严重度优先。
-2. Open questions / assumptions。
-3. Findings 后面再放 brief change summary。
-4. 如果没发现问题，明确说 no findings，并说明剩余 test/manual-QA risk。
+- Critical：security、authorization、data/state corruption、deterministic-runtime breach，或超出 approved behavior boundary。
+- Major：incorrect behavior、missing acceptance、fake verification、materially harmful design，或 broken workflow gate。
+- Minor：不阻塞 acceptance 的 maintainability / clarity 问题。
 
-## Reject Reasons
+每条 finding 都应引用 file/location、evidence、impact、governing rule 或 Contract clause 与 required action；不要凑数量。
 
-- 未记录 behavior decision 就削弱 test assertions。
-- Metadata 被移回 `node.text` comment。
-- 恢复旧 text-comment metadata helper 或旧 top sync panel，而没有新的 decision。
-- 依据 stale docs 改规则，而不是核对当前 `src/` 和 tests。
-- Build 或相关 tests 被跳过且无理由。
-- PGE Generator / Evaluator silently collapsed into one role on medium+ work。
+## Conclusions
+
+- PGE 只返回 `PASS`、`PASS_WITH_NOTES` 或 `FAIL`。
+- 未解决的 Critical 或 Major 必须为 `FAIL`。
+- `PASS_WITH_NOTES` 关闭前需要 explicit owner acceptance。
+- PGE Evaluator 是该任务的独立 AI review；不要再加重复 generic reviewer。
+- 非 PGE 的 non-trivial work 仍需要 independent review；human PR review 始终独立存在。

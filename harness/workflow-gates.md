@@ -1,51 +1,59 @@
-> status: active
-> owner: workflow
-> layer: universal
-> 本文件负责任务开始、验证、收尾和 circuit breaker；不负责具体领域规则。
-
 # Workflow Gates
 
-## Start Gate
+> status: active
+> owner: execution-gates
+> layer: universal
+> 本文件负责 execution、verification、commit gates；不负责 topic-specific implementation rule。
 
-编辑前：
+## Context Gate
 
-- 说明 concrete goal。
-- 列出 unresolved questions，或写 `无待澄清`。
-- 读取相关 owner modules 和 tests。
-- 查看 `harness/failures.md` 是否有相同 pitfall。
-- 查看当前 git status，并保护 unrelated work。
+读取足以安全决定下一步的最小 context：`AGENTS.md`、相关 Harness owner、target files、nearby tests 和 relevant failure notes。
+
+## Size & Risk Gate
+
+- **Non-code**：Harness、文档、静态 config 或 local-gate 文档；不进入 PGE，按影响范围做 proportional verification 和 review。
+- **Small code**：local bug/config/code change，通常 1–3 files。
+- **Medium code**：multi-file feature、public interface、state/schema 或 critical flow。
+- **Large code**：new module、cross-module change、new dependency 或 high-risk workflow。
+
+当代码 scope 跨 owner、public API / state / deployment behavior 出现时升级分类；非代码更新不会仅因 file count 升级为 PGE。
+
+## Path Gate
+
+Small code 在 Coding Start Check 后可直接推进。Medium+ 或 critical-flow 的**代码行为**必须用 `$pge-workflow` 完成 Grill、Contract Challenge、Contract lock 和 Human Start，再回到 Verify/Close。Harness、文档和其他非代码工作走 normal review path，不进 PGE。
 
 ## Coding Start Check
 
-开始实现前明确：
+进入 production code 前：
 
-- behavior 的 truth source；
-- change 的 owner module；
-- verification command；
-- 是否存在 user-data risk；
-- 是否需要 manual Obsidian verification。
+1. 确认 branch 非 protected branch。
+2. 检查 worktree，保护 unrelated user changes。
+3. 确认 required context 和 design artifacts 存在。
+4. 确认 verification strategy。
+5. PGE code work 还需确认 protocol v2、Grill Closure、locked Contract，以及与当前 revision 匹配的 `human_start_gate.status = approved`、non-empty channel/evidence。
+6. PGE code work 直接读取 active Contract，核对 revision、locked decision、Review base 和 Human Start evidence；缺失或 stale 时停止 production code / code-writing agent。
+
+## Dirty Worktree Protocol
+
+- 既有 change 视为 user work；编辑 touched file 前先读 relevant diff。
+- 避免 unrelated formatting。
+- destructive action 前确认 exact target 与 scope；不明确时先问。
 
 ## Verification Gate
 
-- Docs-only：实际检查 links/rendering；一般不需要 build，除非 docs 引用了 generated facts。
-- Pure helper change：targeted Vitest + `npm run lint` + `npm run build`。
-- Cross-module source change：相关 Vitest files、`npm run lint`、`npm test`、`npm run build`。
-- Obsidian integration change：automated gates + `testing.md` 的 manual vault checklist。
+- Docs/Harness/static config：检查 links、rendering、ownership、stale references 和 relevant local gate；通常不需要 build。
+- Pure helper code：targeted Vitest + `npm run lint` + `npm run build`。
+- Cross-module code：相关 Vitest、`npm run lint`、`npm test`、`npm run build`。
+- Obsidian integration：automated gates + `api-standards.md` 的 manual vault verification。
 
-## Circuit Breaker
+记录 command 和 result；不得 silent skip。
 
-同一个 interface 或 behavior 连续三轮 implementation/test/review 失败时：
+## Circuit Breaker Gate
 
-1. 停止继续硬改。
-2. 重读 code、tests 和 API owner docs。
-3. 写下 mismatched assumption。
-4. 继续前先询问用户，或写一个小 design note。
+同一 interface / flow 连续三轮 tests、reference alignment 或 review 失败时，停止 patching，记录 evidence/recovery condition，回到 design 或 user clarification。
 
-## Close Gate
+## Commit Gate
 
-Final response 必须包含：
+commit 前确认 Coding Start Check 仍成立、verification 已运行、没有 unrelated file。Normal PGE / fallback 需要 current-revision Human Start；有 Evaluator 时需要 `PASS` 或 owner-accepted `PASS_WITH_NOTES`，`FAIL` 阻止 commit/close。Non-PGE non-trivial work 需要 independent AI review；Harness build 的独立 review 也在此列。Human PR review 保持独立。
 
-- changed files 的有用概览；
-- commands run 和 pass/fail status；
-- 相关时说明 manual verification status；
-- remaining TODOs 或 risks。
+Serial task 默认 current workspace + semantic branch。parallel code-writing 默认 git worktree，一份 PGE 一条 branch；shared protocol、migration、state machine、public-interface hot zone 或 shared helper hot zone 保持 serial。

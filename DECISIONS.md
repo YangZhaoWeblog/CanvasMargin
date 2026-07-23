@@ -4,6 +4,15 @@
 
 ## 记录
 
+### 2026-07-23：Harness、文档与其他非代码更新不进入 PGE
+
+- **背景**：用户明确要求 Harness 更新以及所有非代码类更新不使用 PGE。
+- **选择**：PGE 只覆盖满足风险条件的代码行为改动；Harness、文档、静态 config 和 local-gate 文档走 Context → proportional verification → independent review 的普通路径。
+- **理由**：这些工作不改变产品运行行为，PGE 的 Contract/Human Start 开销不能替代正常的 ownership、链接、引用与独立审阅检查。
+- **代价**：非代码大改仍需明确 scope、保留项目知识并做独立 review，但没有 PGE Evaluator 的代码行为保证。
+- **回滚**：用户明确要求恢复非代码 PGE，或非代码任务与代码行为形成不可分割的同一 change 时，重新按 PGE protocol 评估。
+- **关联**：`AGENTS.md`、`harness/workflow-gates.md`、`harness/pge-protocol.md`、`harness/instruction-governance.md`。
+
 ### 2026-07-01：项目 harness 接入 PGE Generator / Evaluator baseline
 
 - **背景**：`harness-init` 已升级，原项目 harness 只有简版 PGE 文档，缺少项目级 Generator / Evaluator agent 和 contract/eval 模板。
@@ -20,7 +29,7 @@
 - **理由**：官方规则能捕捉 manifest、settings、DOM 和 UI 风险；Canvas/internal API 类型债需要单独重构。
 - **代价**：`npm run lint` 当前允许 warnings。
 - **回滚**：若 lint 插件误报阻塞开发，则收窄到 release-only gate。
-- **关联**：`eslint.config.mjs`、`harness/testing.md`、`harness/deployment.md`
+- **关联**：`eslint.config.mjs`、`harness/api-standards.md`、`harness/deployment.md`
 
 ### 2026-07-01：删除旧实现文档，只保留反模式和决策原因
 
@@ -43,7 +52,7 @@
 ### 2026-07-01：覆盖式重建 harness，以真实代码和配置为事实源
 
 - **背景**：用户要求 `$harness-init` 覆盖现有 harness，并提醒旧文档可能不匹配代码。
-- **选择**：从 `src/`、tests、package/manifest、脚本和 README 重新生成；Obsidian/Canvas 规则归到 `api-standards` 和 `dependency-map`。
+- **选择**：从 `src/`、tests、package/manifest、脚本和 README 重新生成；Obsidian/Canvas 规则归到 `api-standards`。
 - **理由**：旧文档已经漂移，不能继续作为规则来源。
 - **代价**：旧 harness 的细叙述被压缩；project-grown 规则后续再沉淀。
 - **回滚**：发现新 harness 漏掉仍被 hook 或团队流程依赖的硬约束。

@@ -1,25 +1,18 @@
-> status: active
-> owner: failure-log
-> layer: project-grown
-> 本文件负责记录真实踩坑和可复用教训；不负责一般开发流程。
-
 # Failures
 
-只记录会改变未来行为的 failures。
+> status: active
+> owner: failures
+> layer: project-grown
+> 本文件负责 real incident 和 reusable lesson；不负责 speculative rule。
 
 ## When To Record
 
-- Investigation 超过 10 分钟。
-- Generated code 或 docs 被人工纠正。
-- Obsidian、DOMPurify、CodeMirror 或 Canvas 行为偏离预期。
-- Internal Canvas API 变化导致 break。
-- 同一区域反复修改。
-- Existing docs 被证明与 code 或 tests 冲突。
+以下任一情况记录事实，再决定是否抽象为 rule：non-obvious bug、workflow miss、repeated misunderstanding、rule conflict、investigation 超过 10 分钟、generated code/docs 被人工纠正、Obsidian/DOMPurify/CodeMirror/Canvas 行为偏离预期、internal Canvas API break，或同一区域反复修改。
 
 ## Entry Format
 
 ```md
-## YYYY-MM-DD - Short title
+### YYYY-MM-DD - Short title
 
 - **Trigger**:
 - **Symptom**:
@@ -28,6 +21,8 @@
 - **Future rule**:
 - **Refs**:
 ```
+
+不要把 one-off incident 变成 broad policy；repeated failure 成为 rule 时更新其最小 owner。
 
 ## Entries
 

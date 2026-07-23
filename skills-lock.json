@@ -12,6 +12,20 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/harness-score/SKILL.md",
       "computedHash": "de8356dba7e1dd111dd6b91911e889887c17948555d6f6df5c8f18dd7f83348e"
+    },
+    "pge-workflow": {
+      "source": "YangZhaoWeblog/skills-develop",
+      "sourceType": "github",
+      "revision": "2b668f24e500808ea437d44577be9999fea3d782",
+      "skillPath": "skills/engineering/pge-workflow/SKILL.md",
+      "computedHash": "0a63f46f4bddb56f5535a9f3040c6b66ad7cf106b2cfc55a397afbf463fb8e55"
+    },
+    "tdd": {
+      "source": "YangZhaoWeblog/skills-develop",
+      "sourceType": "github",
+      "revision": "2b668f24e500808ea437d44577be9999fea3d782",
+      "skillPath": "skills/engineering/tdd/SKILL.md",
+      "computedHash": "5363bb2775679fe9311fbb67947f95359169c6e7f1fac77c0f25e190bca6cf2f"
     }
   }
 }
